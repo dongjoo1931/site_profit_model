@@ -72,43 +72,22 @@ st.markdown("""
 # -----------------------------
 def render_kakao_map(address: str, height: int = 430):
     map_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            #map {{
-                width: 100%;
-                height: {height}px;
-            }}
-        </style>
-        <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&autoload=false"></script>
-    </head>
-    <body>
-        <div id="map"></div>
+    <div id="map" style="width:100%; height:{height}px; border-radius:14px; background:#f3f4f6;"></div>
 
-        <script>
-            kakao.maps.load(function() {{
-                var container = document.getElementById('map');
-                var options = {{
-                    center: new kakao.maps.LatLng(37.5665, 126.9780),
-                    level: 3
-                }};
-                var map = new kakao.maps.Map(container, options);
-            }});
-        </script>
-    </body>
-    </html>
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&autoload=false"></script>
+
+    <script>
+    kakao.maps.load(function() {{
+        var container = document.getElementById('map');
+        var options = {{
+            center: new kakao.maps.LatLng(37.5665, 126.9780),
+            level: 3
+        }};
+        var map = new kakao.maps.Map(container, options);
+    }});
+    </script>
     """
-    components.html(map_html, height=height)# -----------------------------
-# 헤더
-# -----------------------------
-st.markdown('<div class="main-title">STEP 1. 부지 맞춤형 공법 선택 프로그램</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="sub-title">입력한 부지 조건을 바탕으로 RC와 OSC(모듈러) 중 어느 공법이 상대적으로 유리한지 판단하는 초기 의사결정 프로토타입입니다.</div>',
-    unsafe_allow_html=True
-)
-
+    st.html(map_html)
 # -----------------------------
 # 기본 정보
 # -----------------------------
