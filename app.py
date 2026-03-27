@@ -1,7 +1,6 @@
 import json
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="STEP 1 - 부지 맞춤형 공법 선택 프로그램",
@@ -71,23 +70,84 @@ st.markdown("""
 # 카카오맵 HTML 렌더 함수
 # -----------------------------
 def render_kakao_map(address: str, height: int = 430):
-    map_html = f"""
-    <div id="map" style="width:100%; height:{height}px; border-radius:14px; background:#f3f4f6;"></div>
+    safe_address = json.dumps(address)
 
-    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&autoload=false"></script>
+    map_html = f"""
+    <div id="map" style="width:100%; height:{height - 40}px; border-radius:14px; background:#f3f4f6;"></div>
+    <div id="map-msg" style="font-size:14px; color:#444; margin-top:8px;">지도 로딩 중...</div>
+
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services&autoload=false"></script>
 
     <script>
-    kakao.maps.load(function() {{
-        var container = document.getElementById('map');
-        var options = {{
-            center: new kakao.maps.LatLng(37.5665, 126.9780),
-            level: 3
-        }};
-        var map = new kakao.maps.Map(container, options);
-    }});
+    (function() {{
+        const inputAddress = {safe_address};
+        const msg = document.getElementById("map-msg");
+
+        function setMsg(text) {{
+            msg.innerText = text;
+        }}
+
+        function initMap() {{
+            try {{
+                const container = document.getElementById("map");
+                const options = {{
+                    center: new kakao.maps.LatLng(37.5665, 126.9780),
+                    level: 3
+                }};
+                const map = new kakao.maps.Map(container, options);
+                const geocoder = new kakao.maps.services.Geocoder();
+
+                geocoder.addressSearch(inputAddress, function(result, status) {{
+                    if (status === kakao.maps.services.Status.OK && result.length > 0) {{
+                        const lat = parseFloat(result[0].y);
+                        const lng = parseFloat(result[0].x);
+                        const coords = new kakao.maps.LatLng(lat, lng);
+
+                        const marker = new kakao.maps.Marker({{
+                            map: map,
+                            position: coords
+                        }});
+
+                        const infowindow = new kakao.maps.InfoWindow({{
+                            content: '<div style="padding:6px 10px;font-size:13px;">입력 부지</div>'
+                        }});
+                        infowindow.open(map, marker);
+
+                        map.setCenter(coords);
+                        setMsg("지도 표시 완료 | 위도: " + lat.toFixed(6) + " / 경도: " + lng.toFixed(6));
+                    }} else {{
+                        setMsg("주소 검색 실패: 도로명주소나 지번주소를 다시 확인해 주세요.");
+                    }}
+                }});
+            }} catch (e) {{
+                setMsg("지도 초기화 오류: " + e.message);
+            }}
+        }}
+
+        function waitForKakao() {{
+            if (window.kakao && window.kakao.maps && window.kakao.maps.load) {{
+                kakao.maps.load(initMap);
+            }} else {{
+                setTimeout(waitForKakao, 300);
+            }}
+        }}
+
+        waitForKakao();
+    }})();
     </script>
     """
-    st.html(map_html)
+
+    st.html(map_html, unsafe_allow_javascript=True)
+
+# -----------------------------
+# 헤더
+# -----------------------------
+st.markdown('<div class="main-title">STEP 1. 부지 맞춤형 공법 선택 프로그램</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="sub-title">입력한 부지 조건을 바탕으로 RC와 OSC(모듈러) 중 어느 공법이 상대적으로 유리한지 판단하는 초기 의사결정 프로토타입입니다.</div>',
+    unsafe_allow_html=True
+)
+
 # -----------------------------
 # 기본 정보
 # -----------------------------
@@ -191,7 +251,6 @@ def evaluate_rc_vs_osc(
     osc_reasons = []
     caution_list = []
 
-    # 1. 도로폭
     if road_width < 4:
         rc_score += 18
         osc_score -= 12
@@ -210,7 +269,6 @@ def evaluate_rc_vs_osc(
         osc_score += 15
         osc_reasons.append("전면 도로폭이 8m 이상으로 양중 및 반입 계획 측면에서 OSC에 유리합니다.")
 
-    # 2. 연면적
     if gross_area < 600:
         rc_score += 12
         rc_reasons.append("연면적이 600㎡ 미만으로 작아 모듈러의 표준화 효과가 제한될 수 있습니다.")
@@ -222,7 +280,6 @@ def evaluate_rc_vs_osc(
         osc_score += 12
         osc_reasons.append("연면적이 1,200㎡ 이상이어서 모듈러의 반복 생산과 공기 단축 효과를 기대할 수 있습니다.")
 
-    # 3. 층수
     if floors <= 5:
         osc_score += 8
         osc_reasons.append("층수가 5층 이하로 비교적 낮아 OSC 적용에 유리한 조건입니다.")
@@ -237,14 +294,12 @@ def evaluate_rc_vs_osc(
         rc_reasons.append("층수가 9층 이상으로 높아질수록 구조·접합·양중 검토 부담이 커집니다.")
         caution_list.append("9층 이상에서는 모듈러 적용 한계와 구조 시스템 검토가 중요합니다.")
 
-    # 4. 코너 부지
     if corner_site == "예":
         osc_score += 4
         osc_reasons.append("코너 부지는 차량 접근과 회차 측면에서 일부 유리할 수 있습니다.")
     else:
         rc_score += 1
 
-    # 5. 장애물 개수
     if obstacle_count == 0:
         osc_score += 8
         osc_reasons.append("전신주·가로수 등 장애물이 없어 모듈 설치에 유리합니다.")
@@ -258,7 +313,6 @@ def evaluate_rc_vs_osc(
         rc_reasons.append("장애물이 3개 이상으로 대형 장비 운영과 모듈 반입에 불리합니다.")
         caution_list.append("장애물 이전 비용과 장비 동선을 별도로 검토해야 합니다.")
 
-    # 6. 인접 건물 이격거리
     if adjacent_building_gap < 2:
         osc_score += 9
         rc_reasons.append("인접 건물 이격거리가 매우 좁아 현장 작업 제약이 큽니다.")
@@ -271,7 +325,6 @@ def evaluate_rc_vs_osc(
         rc_score += 6
         rc_reasons.append("인접 건물 이격거리가 4m 이상으로 일반 현장 시공의 제약이 상대적으로 적습니다.")
 
-    # 7. 목표 공사기간
     if target_duration <= 10:
         osc_score += 15
         osc_reasons.append("목표 공사기간이 10개월 이하로 짧아 공기 단축형 공법의 장점이 큽니다.")
@@ -282,7 +335,6 @@ def evaluate_rc_vs_osc(
         rc_score += 6
         rc_reasons.append("목표 공사기간이 16개월 이상으로 공기 제약이 상대적으로 작습니다.")
 
-    # 8. 토지가격 수준
     if official_land_price < 300:
         rc_score += 5
         rc_reasons.append("토지가격 수준이 낮아 공기 단축에 따른 금융비용 절감 효과가 상대적으로 작을 수 있습니다.")
@@ -293,7 +345,6 @@ def evaluate_rc_vs_osc(
         osc_score += 10
         osc_reasons.append("토지가격 수준이 높아 공기 단축에 따른 금융비용 절감 효과가 커질 수 있습니다.")
 
-    # 9. 허용 가능한 공사비 할증 한도
     if cost_premium_limit < 5:
         rc_score += 14
         rc_reasons.append("허용 가능한 공사비 할증 한도가 5% 미만으로 낮아 RC가 상대적으로 유리합니다.")
@@ -307,7 +358,6 @@ def evaluate_rc_vs_osc(
         osc_score += 10
         osc_reasons.append("허용 가능한 공사비 할증 한도가 15% 이상으로 공기 단축형 공법 검토가 유리합니다.")
 
-    # 10. 평면 반복성
     if plan_repeatability <= 2:
         rc_score += 10
         rc_reasons.append("평면 반복성이 낮아 모듈러 표준화 효과가 제한될 수 있습니다.")
@@ -318,13 +368,9 @@ def evaluate_rc_vs_osc(
         osc_score += 12
         osc_reasons.append("평면 반복성이 높아 모듈러 표준화 및 반복 생산에 유리합니다.")
 
-    # 추천 공법
     recommended_method = "RC" if rc_score >= osc_score else "OSC(모듈러)"
-
-    # 추천 이유
     reason_list = rc_reasons if recommended_method == "RC" else osc_reasons
 
-    # 추천 모듈러 타입
     modular_type = "해당 없음"
     if recommended_method == "OSC(모듈러)":
         if road_width >= 8 and gross_area >= 1200 and floors <= 6:
@@ -334,7 +380,6 @@ def evaluate_rc_vs_osc(
         else:
             modular_type = "일반형 모듈러 타입"
 
-    # 임계점 해석
     diff = abs(rc_score - osc_score)
     threshold_comment = []
 
@@ -394,7 +439,6 @@ if run_clicked:
 
     st.subheader("분석 결과")
 
-    # 기본 정보 표시
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     info_a, info_b = st.columns(2)
     with info_a:
@@ -405,7 +449,6 @@ if run_clicked:
         st.markdown(f'<div class="big-value">{site_address if site_address else "-"}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 결과 지도
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("분석 대상 부지 위치")
     if site_address.strip():
@@ -414,7 +457,6 @@ if run_clicked:
         st.write("주소가 입력되지 않아 지도를 표시할 수 없습니다.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 점수 카드
     c1, c2 = st.columns(2)
     with c1:
         st.markdown('<div class="result-card">', unsafe_allow_html=True)
@@ -427,7 +469,6 @@ if run_clicked:
         st.markdown(f'<div class="big-value">{osc_score}</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 추천 공법
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("추천 공법")
     if recommended_method == "RC":
@@ -436,7 +477,6 @@ if run_clicked:
         st.success(f"추천 공법: **{recommended_method}**")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 점수표
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("공법별 점수 비교")
     score_df = pd.DataFrame({
@@ -447,7 +487,6 @@ if run_clicked:
     st.bar_chart(score_df.set_index("공법"))
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 추천 사유
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("추천 사유")
     if reason_list:
@@ -457,20 +496,17 @@ if run_clicked:
         st.write("뚜렷한 우세 요인이 적어 추가 검토가 필요합니다.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 추천 모듈러 타입
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("추천 모듈러 기본 모델")
     st.write(modular_type)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 임계점 해석
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("임계점 해석")
     for comment in threshold_comment:
         st.write(f"- {comment}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 추가 검토사항
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("추가 검토 필요 사항")
     if caution_list:
