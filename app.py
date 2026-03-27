@@ -87,17 +87,22 @@ def render_kakao_map(address: str, height: int = 430):
         }}
         #map {{
           width: 100%;
-          height: {height - 70}px;
+          height: {height - 60}px;
           border-radius: 14px;
           background: #f3f4f6;
         }}
         #msg {{
           font-size: 14px;
           color: #222;
-          padding: 10px 4px 0 4px;
+          padding: 8px 4px 0 4px;
           white-space: pre-wrap;
         }}
       </style>
+
+      <!-- 핵심: 동적 append 말고, 정적으로 SDK 로드 -->
+      <script type="text/javascript"
+        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services&autoload=false">
+      </script>
     </head>
     <body>
       <div id="map"></div>
@@ -107,24 +112,15 @@ def render_kakao_map(address: str, height: int = 430):
         const inputAddress = {safe_address};
         const msg = document.getElementById("msg");
 
-        function log(text) {{
-          msg.innerHTML = text;
-        }}
-
-        function startMap() {{
+        kakao.maps.load(function() {{
           try {{
-            if (!window.kakao || !window.kakao.maps) {{
-              log("실패: kakao.maps 객체가 생성되지 않았습니다.\\n도메인 등록 또는 SDK 로딩 문제일 가능성이 큽니다.");
-              return;
-            }}
-
-            const mapContainer = document.getElementById("map");
-            const mapOption = {{
+            const container = document.getElementById("map");
+            const options = {{
               center: new kakao.maps.LatLng(37.5665, 126.9780),
               level: 3
             }};
 
-            const map = new kakao.maps.Map(mapContainer, mapOption);
+            const map = new kakao.maps.Map(container, options);
             const geocoder = new kakao.maps.services.Geocoder();
 
             geocoder.addressSearch(inputAddress, function(result, status) {{
@@ -139,29 +135,15 @@ def render_kakao_map(address: str, height: int = 430):
                 }});
 
                 map.setCenter(coords);
-                log("성공\\n위도: " + lat.toFixed(6) + "\\n경도: " + lng.toFixed(6));
+                msg.innerHTML = "성공\\n위도: " + lat.toFixed(6) + "\\n경도: " + lng.toFixed(6);
               }} else {{
-                log("실패: 주소 검색 실패\\n입력 주소를 더 정확히 써 보세요.\\n예: 서울특별시 중구 세종대로 110");
+                msg.innerHTML = "주소 검색 실패\\n예: 서울특별시 중구 세종대로 110";
               }}
             }});
           }} catch (e) {{
-            log("실패: 지도 초기화 예외\\n" + e.message);
+            msg.innerHTML = "지도 초기화 예외\\n" + e.message;
           }}
-        }}
-
-        const script = document.createElement("script");
-        script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services&autoload=false";
-        script.onload = function() {{
-          if (window.kakao && window.kakao.maps && window.kakao.maps.load) {{
-            kakao.maps.load(startMap);
-          }} else {{
-            log("실패: SDK는 로드됐지만 kakao.maps.load를 찾지 못했습니다.");
-          }}
-        }};
-        script.onerror = function() {{
-          log("실패: Kakao SDK 스크립트 로드 실패\\nJavaScript 키, 도메인 등록, Kakao Map 사용 설정을 다시 확인하세요.");
-        }};
-        document.head.appendChild(script);
+        }});
       </script>
     </body>
     </html>
