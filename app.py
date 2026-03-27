@@ -1,11 +1,16 @@
+import json
 import streamlit as st
 import pandas as pd
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="STEP 1 - 부지 맞춤형 공법 선택 프로그램",
     page_icon="🏗️",
     layout="wide"
 )
+
+# 카카오 JavaScript 키
+KAKAO_JS_KEY = "60f1615487b2e8ea7a600d8931158a1d"
 
 # -----------------------------
 # 커스텀 CSS
@@ -45,6 +50,12 @@ st.markdown("""
 .big-value {
     font-size: 26px;
     font-weight: 800;
+    word-break: break-word;
+}
+.map-caption {
+    font-size: 14px;
+    color: #666;
+    margin-top: 0.5rem;
 }
 .stButton > button {
     width: 100%;
@@ -55,6 +66,88 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+# -----------------------------
+# 카카오맵 HTML 렌더 함수
+# -----------------------------
+def render_kakao_map(address: str, height: int = 430):
+    safe_address = json.dumps(address)
+
+    map_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        html, body {{
+          margin: 0;
+          padding: 0;
+          background: white;
+        }}
+        #map {{
+          width: 100%;
+          height: {height - 10}px;
+          border-radius: 14px;
+        }}
+        #msg {{
+          font-family: sans-serif;
+          font-size: 14px;
+          color: #444;
+          padding-top: 8px;
+        }}
+      </style>
+      <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services"></script>
+    </head>
+    <body>
+      <div id="map"></div>
+      <div id="msg"></div>
+
+      <script>
+        const inputAddress = {safe_address};
+        const msg = document.getElementById("msg");
+
+        const mapContainer = document.getElementById("map");
+        const defaultCenter = new kakao.maps.LatLng(37.5665, 126.9780);
+
+        const map = new kakao.maps.Map(mapContainer, {{
+          center: defaultCenter,
+          level: 3
+        }});
+
+        const geocoder = new kakao.maps.services.Geocoder();
+
+        function showError(text) {{
+          msg.innerHTML = text;
+        }}
+
+        geocoder.addressSearch(inputAddress, function(result, status) {{
+          if (status === kakao.maps.services.Status.OK && result.length > 0) {{
+            const lat = parseFloat(result[0].y);
+            const lng = parseFloat(result[0].x);
+            const coords = new kakao.maps.LatLng(lat, lng);
+
+            const marker = new kakao.maps.Marker({{
+              map: map,
+              position: coords
+            }});
+
+            const infowindow = new kakao.maps.InfoWindow({{
+              content: '<div style="padding:6px 10px;font-size:13px;">입력 부지</div>'
+            }});
+
+            infowindow.open(map, marker);
+            map.setCenter(coords);
+
+            msg.innerHTML = '위도: ' + lat.toFixed(6) + ' / 경도: ' + lng.toFixed(6);
+          }} else {{
+            showError("주소를 찾지 못했습니다. 도로명주소 또는 지번주소를 다시 확인해 주세요.");
+          }}
+        }});
+      </script>
+    </body>
+    </html>
+    """
+    components.html(map_html, height=height)
 
 # -----------------------------
 # 헤더
@@ -74,9 +167,32 @@ st.subheader("기본 정보 입력")
 info_col1, info_col2 = st.columns(2)
 
 with info_col1:
-    project_name = st.text_input("사업명", value="", placeholder="예: 수원시 ○○동 신축매입임대 사업")
+    project_name = st.text_input(
+        "사업명",
+        value="",
+        placeholder="예: 수원시 ○○동 신축매입임대 사업"
+    )
+
 with info_col2:
-    site_address = st.text_input("부지 도로명주소", value="", placeholder="예: 경기도 수원시 영통구 ○○로 00")
+    site_address = st.text_input(
+        "부지 도로명주소",
+        value="",
+        placeholder="예: 경기도 수원시 영통구 ○○로 00"
+    )
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# -----------------------------
+# 주소 입력 시 지도 표시
+# -----------------------------
+st.markdown('<div class="block-card">', unsafe_allow_html=True)
+st.subheader("입력 부지 위치 확인")
+
+if site_address.strip():
+    render_kakao_map(site_address.strip(), height=460)
+    st.markdown('<div class="map-caption">주소가 맞으면 아래 사업 조건을 계속 입력하면 됩니다.</div>', unsafe_allow_html=True)
+else:
+    st.info("부지 도로명주소를 입력하면 카카오 지도가 표시됩니다.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -102,7 +218,13 @@ with col2:
     official_land_price = st.number_input("공시지가 또는 토지가격 수준 (만원/㎡)", min_value=0.0, value=350.0, step=10.0)
     cost_premium_limit = st.number_input("허용 가능한 공사비 할증 한도 (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0)
 
-plan_repeatability = st.slider("평면 반복성 점수 (1=비정형, 5=반복형)", min_value=1, max_value=5, value=3, step=1)
+plan_repeatability = st.slider(
+    "평면 반복성 점수 (1=비정형, 5=반복형)",
+    min_value=1,
+    max_value=5,
+    value=3,
+    step=1
+)
 
 st.markdown("""
 **입력 기준 예시**
@@ -351,6 +473,15 @@ if run_clicked:
     with info_b:
         st.markdown('<div class="small-label">부지 도로명주소</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="big-value">{site_address if site_address else "-"}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 결과 지도
+    st.markdown('<div class="result-card">', unsafe_allow_html=True)
+    st.subheader("분석 대상 부지 위치")
+    if site_address.strip():
+        render_kakao_map(site_address.strip(), height=460)
+    else:
+        st.write("주소가 입력되지 않아 지도를 표시할 수 없습니다.")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 점수 카드
