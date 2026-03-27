@@ -2,7 +2,7 @@ import json
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
-
+components.html(map_html, height=height)
 st.set_page_config(
     page_title="STEP 1 - 부지 맞춤형 공법 선택 프로그램",
     page_icon="🏗️",
@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # 카카오 JavaScript 키
-KAKAO_JS_KEY = "60f1615487b2e8ea7a600d8931158a1d"
+KAKAO_JS_KEY = "75c1fe29220300eaae574afb50433111"
 
 # -----------------------------
 # 커스텀 CSS
