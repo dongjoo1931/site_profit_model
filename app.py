@@ -1,6 +1,6 @@
-import json
 import streamlit as st
 import pandas as pd
+from geopy.geocoders import Nominatim
 
 st.set_page_config(
     page_title="STEP 1 - 부지 맞춤형 공법 선택 프로그램",
@@ -8,8 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 카카오 JavaScript 키
-KAKAO_JS_KEY = "75c1fe29220300eaae574afb50433111"
+
 
 # -----------------------------
 # 커스텀 CSS
@@ -69,76 +68,32 @@ st.markdown("""
 # -----------------------------
 # 카카오맵 HTML 렌더 함수
 # -----------------------------
-def render_kakao_map(address: str, height: int = 430):
-    safe_address = json.dumps(address)
 
-    map_html = f"""
-    <div id="map" style="width:100%; height:{height - 40}px; border-radius:14px; background:#f3f4f6;"></div>
-    <div id="map-msg" style="font-size:14px; color:#444; margin-top:8px;">지도 로딩 중...</div>
+def geocode_address(address: str):
+    try:
+        geolocator = Nominatim(user_agent="site_profit_model_app")
+        location = geolocator.geocode(address, timeout=10)
+        if location:
+            return location.latitude, location.longitude
+        return None, None
+    except Exception:
+        return None, None
 
-    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services&autoload=false"></script>
 
-    <script>
-    (function() {{
-        const inputAddress = {safe_address};
-        const msg = document.getElementById("map-msg");
+def render_simple_map(address: str):
+    lat, lon = geocode_address(address)
 
-        function setMsg(text) {{
-            msg.innerText = text;
-        }}
-
-        function initMap() {{
-            try {{
-                const container = document.getElementById("map");
-                const options = {{
-                    center: new kakao.maps.LatLng(37.5665, 126.9780),
-                    level: 3
-                }};
-                const map = new kakao.maps.Map(container, options);
-                const geocoder = new kakao.maps.services.Geocoder();
-
-                geocoder.addressSearch(inputAddress, function(result, status) {{
-                    if (status === kakao.maps.services.Status.OK && result.length > 0) {{
-                        const lat = parseFloat(result[0].y);
-                        const lng = parseFloat(result[0].x);
-                        const coords = new kakao.maps.LatLng(lat, lng);
-
-                        const marker = new kakao.maps.Marker({{
-                            map: map,
-                            position: coords
-                        }});
-
-                        const infowindow = new kakao.maps.InfoWindow({{
-                            content: '<div style="padding:6px 10px;font-size:13px;">입력 부지</div>'
-                        }});
-                        infowindow.open(map, marker);
-
-                        map.setCenter(coords);
-                        setMsg("지도 표시 완료 | 위도: " + lat.toFixed(6) + " / 경도: " + lng.toFixed(6));
-                    }} else {{
-                        setMsg("주소 검색 실패: 도로명주소나 지번주소를 다시 확인해 주세요.");
-                    }}
-                }});
-            }} catch (e) {{
-                setMsg("지도 초기화 오류: " + e.message);
-            }}
-        }}
-
-        function waitForKakao() {{
-            if (window.kakao && window.kakao.maps && window.kakao.maps.load) {{
-                kakao.maps.load(initMap);
-            }} else {{
-                setTimeout(waitForKakao, 300);
-            }}
-        }}
-
-        waitForKakao();
-    }})();
-    </script>
-    """
-
-    st.html(map_html, unsafe_allow_javascript=True)
-
+    if lat is not None and lon is not None:
+        map_df = pd.DataFrame({
+            "lat": [lat],
+            "lon": [lon]
+        })
+        st.map(map_df)
+        st.caption(f"위도: {lat:.6f} / 경도: {lon:.6f}")
+        return True
+    else:
+        st.warning("주소를 찾지 못했습니다. 도로명주소를 다시 확인해 주세요.")
+        return False
 # -----------------------------
 # 헤더
 # -----------------------------
@@ -179,10 +134,11 @@ st.markdown('<div class="block-card">', unsafe_allow_html=True)
 st.subheader("입력 부지 위치 확인")
 
 if site_address.strip():
-    render_kakao_map(site_address.strip(), height=460)
-    st.markdown('<div class="map-caption">주소가 맞으면 아래 사업 조건을 계속 입력하면 됩니다.</div>', unsafe_allow_html=True)
+    success = render_simple_map(site_address.strip())
+    if success:
+        st.markdown('<div class="map-caption">주소가 맞으면 아래 사업 조건을 계속 입력하면 됩니다.</div>', unsafe_allow_html=True)
 else:
-    st.info("부지 도로명주소를 입력하면 카카오 지도가 표시됩니다.")
+    st.info("부지 도로명주소를 입력하면 지도가 표시됩니다.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -452,7 +408,7 @@ if run_clicked:
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.subheader("분석 대상 부지 위치")
     if site_address.strip():
-        render_kakao_map(site_address.strip(), height=460)
+        render_simple_map(site_address.strip())
     else:
         st.write("주소가 입력되지 않아 지도를 표시할 수 없습니다.")
     st.markdown('</div>', unsafe_allow_html=True)
