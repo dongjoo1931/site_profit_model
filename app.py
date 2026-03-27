@@ -71,85 +71,36 @@ st.markdown("""
 # 카카오맵 HTML 렌더 함수
 # -----------------------------
 def render_kakao_map(address: str, height: int = 430):
-    safe_address = json.dumps(address)
-
     map_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-      <meta charset="utf-8" />
-      <style>
-        html, body {{
-          margin: 0;
-          padding: 0;
-          background: white;
-          font-family: sans-serif;
-        }}
-        #map {{
-          width: 100%;
-          height: {height - 60}px;
-          border-radius: 14px;
-          background: #f3f4f6;
-        }}
-        #msg {{
-          font-size: 14px;
-          color: #222;
-          padding: 8px 4px 0 4px;
-          white-space: pre-wrap;
-        }}
-      </style>
-
-      <!-- 핵심: 동적 append 말고, 정적으로 SDK 로드 -->
-      <script type="text/javascript"
-        src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&libraries=services&autoload=false">
-      </script>
+        <meta charset="utf-8">
+        <style>
+            #map {{
+                width: 100%;
+                height: {height}px;
+            }}
+        </style>
+        <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_KEY}&autoload=false"></script>
     </head>
     <body>
-      <div id="map"></div>
-      <div id="msg">지도 로딩 중...</div>
+        <div id="map"></div>
 
-      <script>
-        const inputAddress = {safe_address};
-        const msg = document.getElementById("msg");
-
-        kakao.maps.load(function() {{
-          try {{
-            const container = document.getElementById("map");
-            const options = {{
-              center: new kakao.maps.LatLng(37.5665, 126.9780),
-              level: 3
-            }};
-
-            const map = new kakao.maps.Map(container, options);
-            const geocoder = new kakao.maps.services.Geocoder();
-
-            geocoder.addressSearch(inputAddress, function(result, status) {{
-              if (status === kakao.maps.services.Status.OK && result.length > 0) {{
-                const lat = parseFloat(result[0].y);
-                const lng = parseFloat(result[0].x);
-                const coords = new kakao.maps.LatLng(lat, lng);
-
-                const marker = new kakao.maps.Marker({{
-                  map: map,
-                  position: coords
-                }});
-
-                map.setCenter(coords);
-                msg.innerHTML = "성공\\n위도: " + lat.toFixed(6) + "\\n경도: " + lng.toFixed(6);
-              }} else {{
-                msg.innerHTML = "주소 검색 실패\\n예: 서울특별시 중구 세종대로 110";
-              }}
+        <script>
+            kakao.maps.load(function() {{
+                var container = document.getElementById('map');
+                var options = {{
+                    center: new kakao.maps.LatLng(37.5665, 126.9780),
+                    level: 3
+                }};
+                var map = new kakao.maps.Map(container, options);
             }});
-          }} catch (e) {{
-            msg.innerHTML = "지도 초기화 예외\\n" + e.message;
-          }}
-        }});
-      </script>
+        </script>
     </body>
     </html>
     """
-    components.html(map_html, height=height)
-# -----------------------------
+    components.html(map_html, height=height)# -----------------------------
 # 헤더
 # -----------------------------
 st.markdown('<div class="main-title">STEP 1. 부지 맞춤형 공법 선택 프로그램</div>', unsafe_allow_html=True)
