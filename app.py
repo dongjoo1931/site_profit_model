@@ -2,7 +2,7 @@ import json
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
-components.html(map_html, height=height)
+
 st.set_page_config(
     page_title="STEP 1 - 부지 맞춤형 공법 선택 프로그램",
     page_icon="🏗️",
