@@ -165,6 +165,22 @@ html, body, [data-testid="stAppViewContainer"] {
     padding: 1rem;
     min-height: 112px;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
+    margin-bottom: 1.2rem;
+}
+
+/* 결과 카드 사이 간격 개선 */
+[data-testid="column"] > div {
+    padding-right: 0.4rem;
+    padding-left: 0.4rem;
+}
+
+.section-card {
+    margin-bottom: 1.3rem;
+}
+
+.result-hero {
+    margin-top: 0.6rem;
+    margin-bottom: 1.4rem;
 }
 .metric-label {
     font-size: 13px;
@@ -1182,7 +1198,7 @@ st.sidebar.markdown("## 입력 패널")
 st.sidebar.caption("입력 항목을 그룹별로 정리했습니다. 필요한 조건을 찾기 쉽게 묶어서 배치했습니다.")
 
 st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">기본 정보</div>', unsafe_allow_html=True)
-project_name = st.sidebar.text_input("사업명", value="수익성극대화를위한부지맞춤형신축매입임대사업모델제안")
+project_name = st.sidebar.text_input("사업명", value="", placeholder="프로젝트 이름을 입력하세요")
 site_address = st.sidebar.text_input("부지 도로명주소", value="")
 building_use = st.sidebar.selectbox("건물 용도", ["공동주택", "기숙사", "학교", "병원", "업무시설", "복합용도"])
 
