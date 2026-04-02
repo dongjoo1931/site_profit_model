@@ -55,7 +55,37 @@ html, body, [data-testid="stAppViewContainer"] {
     background: linear-gradient(180deg, #122844 0%, #183b66 100%);
 }
 
-[data-testid="stSidebar"] * {
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {
+    color: white;
+}
+
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea {
+    color: #111827 !important;
+    background: #ffffff !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    color: #111827 !important;
+    background: #ffffff !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] * {
+    color: #111827 !important;
+}
+
+[data-testid="stSidebar"] .stNumberInput input,
+[data-testid="stSidebar"] .stTextInput input {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+}
+
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] .stSlider label {
     color: white !important;
 }
 
@@ -1220,7 +1250,12 @@ monthly_financing_saving_krw = st.sidebar.number_input("공기단축 1개월당 
 rc_equipment_cost_krw = st.sidebar.number_input("RC 장비/현장 추가비 (원)", min_value=0.0, value=60000000.0, step=1000000.0)
 tower_usage_months = st.sidebar.number_input("타워크레인 사용 개월 수", min_value=0.0, value=3.0, step=0.5)
 
+if "analysis_ready" not in st.session_state:
+    st.session_state.analysis_ready = False
+
 run_analysis = st.sidebar.button("분석 실행")
+if run_analysis:
+    st.session_state.analysis_ready = True
 
 
 # ============================================================
@@ -1352,9 +1387,24 @@ with c2:
 with c3:
     metric_box("선정 모듈", module_name, f"예상 모듈 수 {int(module_count)}개")
 with c4:
-    metric_box("추천 구조방식", structure_name, f"추천 장비 {selected_crane_name}")
+    metric_box("분석 상태", "입력 대기" if not st.session_state.analysis_ready else "분석 완료", "왼쪽에서 조건 입력 후 분석 실행")
 
-st.markdown("<div class='small-note'>왼쪽 입력 패널의 값을 바꾸면 현재 화면 전체가 즉시 업데이트됩니다. 이후에도 같은 방식으로 계속 코드를 추가·수정하면서 단계적으로 고도화할 수 있습니다.</div>", unsafe_allow_html=True)
+st.markdown("<div class='small-note'>왼쪽 입력 패널에서 값을 모두 입력한 뒤 <b>분석 실행</b> 버튼을 누르면 결과가 아래에 표시됩니다.</div>", unsafe_allow_html=True)
+
+if not st.session_state.analysis_ready:
+    st.markdown(
+        """
+        <div class="section-card">
+            <div class="section-title">입력 후 분석 실행</div>
+            <div class="section-desc">
+                결과를 바로 노출하지 않고, 입력값을 정리한 뒤 분석 실행 버튼을 눌렀을 때만 결과를 보여주도록 변경했습니다.
+                왼쪽 패널에서 부지·건물·모듈·비용 조건을 입력한 뒤 분석을 실행해 주세요.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.stop()
 
 
 # ============================================================
