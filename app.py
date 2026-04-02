@@ -663,6 +663,91 @@ def filter_feasible_trailers(candidates: List[Dict[str, object]]) -> List[Dict[s
     return [c for c in candidates if c["판정"] == "가능"]
 
 
+def estimate_module_count(
+    gross_area_m2: float,
+    module_length_m: float,
+    module_width_m: float,
+    efficiency_ratio: float,
+) -> int:
+    module_area = module_length_m * module_width_m
+    effective_area = module_area * efficiency_ratio
+    if effective_area <= 0:
+        return 0
+    return max(1, math.ceil(gross_area_m2 / effective_area))
+
+
+def evaluate_route_permit(
+    module_width_m: float,
+    transport_height_m: float,
+    total_weight_t: float,
+    min_road_width_m: float,
+    turn_condition: str,
+    obstacle_level: str,
+    bridge_tunnel_height_limit_m: float,
+    managed_road_42m: bool,
+    illegal_parking_constant: str,
+) -> Dict[str, object]:
+    legal_height_limit = 4.2 if managed_road_42m else 4.0
+    permit_needed = False
+    route_ok = True
+    reasons: List[str] = []
+
+    if module_width_m > 2.5:
+        permit_needed = True
+        reasons.append("폭 2.5m 초과")
+    if transport_height_m > legal_height_limit:
+        permit_needed = True
+        reasons.append(f"운송 높이 {legal_height_limit:.1f}m 초과")
+    if total_weight_t > 40.0:
+        permit_needed = True
+        reasons.append("총중량 40t 초과 가능성")
+
+    if min_road_width_m < 4.0:
+        route_ok = False
+        reasons.append("최소 도로폭 4m 미만")
+    elif min_road_width_m < 6.0:
+        reasons.append("최소 도로폭 4~6m")
+
+    if turn_condition == "협소 코너 다수/U턴 필요":
+        route_ok = False
+        reasons.append("협소 코너/U턴 필요")
+    elif turn_condition == "코너 2개 이상":
+        reasons.append("코너 2개 이상")
+
+    if obstacle_level == "전면부 장애 심함":
+        route_ok = False
+        reasons.append("전면부 장애 심함")
+    elif obstacle_level == "전선/가로수 일부":
+        reasons.append("전선/가로수 일부")
+
+    if bridge_tunnel_height_limit_m > 0 and transport_height_m > bridge_tunnel_height_limit_m:
+        route_ok = False
+        reasons.append("교량/터널 높이 제한 초과")
+
+    if illegal_parking_constant == "높음":
+        reasons.append("상시 불법주정차 높음")
+    elif illegal_parking_constant == "중간":
+        reasons.append("상시 불법주정차 중간")
+
+    if not reasons:
+        reasons.append("주요 경로 제약 없음")
+
+    if not route_ok:
+        route_status = "불가"
+    elif permit_needed:
+        route_status = "조건부 가능"
+    else:
+        route_status = "가능"
+
+    return {
+        "route_ok": route_ok,
+        "permit_needed": permit_needed,
+        "legal_height_limit_m": legal_height_limit,
+        "route_status": route_status,
+        "reasons": reasons,
+    }
+
+
 
 def evaluate_cranes(
     needed_lifting_t: float,
@@ -882,6 +967,8 @@ with col3:
     staging_area_m2 = st.number_input("적치 가능 면적 (㎡)", min_value=0.0, value=120.0, step=10.0)
     trailer_stop_zone_m = st.number_input("트레일러 정차 가능 구간 (m)", min_value=0.0, value=15.0, step=1.0)
     crane_candidate_offset_m = st.number_input("크레인 설치 후보점의 건물 외곽 이격거리 (m)", min_value=0.0, value=6.0, step=1.0)
+    bridge_tunnel_height_limit_m = st.number_input("경로상 교량/터널 높이 제한 (m, 없으면 0)", min_value=0.0, value=0.0, step=0.1)
+    managed_road_42m = st.radio("관리도로 4.2m 적용 여부", ["아니오", "예"], horizontal=True)
     road_side_short_term = st.radio("도로변 단기 설치 중심 현장인가?", ["예", "아니오"], horizontal=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -936,9 +1023,20 @@ else:
     module_form = st.selectbox("모듈 형식", ["corner-supported", "open-ended", "open-sided", "대개구부/비정형", "hybrid"])
     module_desc = "사용자 정의"
 
+count_mode = st.radio("모듈 개수 입력 방식", ["자동 산정", "직접 입력"], horizontal=True)
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    module_count = st.number_input("총 모듈 개수", min_value=1, value=20, step=1)
+    if count_mode == "자동 산정":
+        module_efficiency_ratio = st.slider("모듈 면적 효율계수", min_value=0.50, max_value=0.95, value=0.80, step=0.01)
+        module_count = estimate_module_count(
+            gross_area_m2=gross_area_m2,
+            module_length_m=module_length_m,
+            module_width_m=module_width_m,
+            efficiency_ratio=module_efficiency_ratio,
+        )
+    else:
+        module_efficiency_ratio = 0.80
+        module_count = st.number_input("총 모듈 개수", min_value=1, value=20, step=1)
 with col2:
     prefab_rate = st.slider("공장 제작 비율", min_value=0.30, max_value=0.95, value=0.70, step=0.05)
 with col3:
@@ -946,6 +1044,10 @@ with col3:
 with col4:
     safety_factor = st.number_input("안전계수", min_value=1.00, value=1.15, step=0.05)
 
+if count_mode == "자동 산정":
+    st.caption(f"자동 산정 모듈 개수: {module_count}개 | 모듈 바닥면적 {module_length_m * module_width_m:.2f}㎡ | 효율계수 {module_efficiency_ratio:.2f}")
+else:
+    st.caption(f"총 모듈 개수: {int(module_count)}개")
 st.caption(module_desc)
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1005,6 +1107,18 @@ if run_clicked:
 
     # 2. 운송 리스크
     representative_transport_height = min([row["운송 높이(m)"] for row in trailer_candidates]) if trailer_candidates else module_height_m
+    representative_total_weight_t = min([row["총중량 추정(t)"] for row in trailer_candidates]) if trailer_candidates else module_weight_t
+    route_eval = evaluate_route_permit(
+        module_width_m=module_width_m,
+        transport_height_m=representative_transport_height,
+        total_weight_t=representative_total_weight_t,
+        min_road_width_m=road_width_m,
+        turn_condition=turn_condition,
+        obstacle_level=obstacle_level,
+        bridge_tunnel_height_limit_m=bridge_tunnel_height_limit_m,
+        managed_road_42m=(managed_road_42m == "예"),
+        illegal_parking_constant=illegal_parking_constant,
+    )
     transport_score, transport_reasons = transport_risk_score(
         module_width_m=module_width_m,
         transport_height_m=representative_transport_height,
@@ -1103,7 +1217,7 @@ if run_clicked:
     )
 
     final_method, final_reasons = recommend_method(
-        transport_feasible=len(feasible_trailers) > 0,
+        transport_feasible=(len(feasible_trailers) > 0 and route_eval["route_ok"]),
         best_lifting_margin=best_lifting_margin,
         transport_risk_score_value=transport_score,
         installation_risk_score_value=install_score,
@@ -1123,15 +1237,16 @@ if run_clicked:
     with k1:
         st.markdown('<div class="kpi"><div class="kpi-title">최종 판단</div><div class="kpi-value">' + final_method + '</div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown('<div class="kpi"><div class="kpi-title">운송 리스크</div><div class="kpi-value">' + f'{transport_score}점 ({transport_risk_bucket(transport_score)})' + '</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="kpi"><div class="kpi-title">경로 허가 판정</div><div class="kpi-value">' + route_eval["route_status"] + '</div></div>', unsafe_allow_html=True)
     with k3:
-        st.markdown('<div class="kpi"><div class="kpi-title">설치 리스크</div><div class="kpi-value">' + f'{install_score}점 ({transport_risk_bucket(install_score)})' + '</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="kpi"><div class="kpi-title">운송 리스크</div><div class="kpi-value">' + f'{transport_score}점 ({transport_risk_bucket(transport_score)})' + '</div></div>', unsafe_allow_html=True)
     with k4:
         st.markdown('<div class="kpi"><div class="kpi-title">최고 양중 여유율</div><div class="kpi-value">' + (f'{best_lifting_margin:.2f}' if best_lifting_margin else '0.00') + '</div></div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
     st.markdown("### A. 핵심 판정")
     st.write(f"- 선택 모듈: **{module_name}**")
+    st.write(f"- 총 모듈 개수: **{int(module_count)}개**")
     st.write(f"- 추천 구조방식: **{recommended_structure}**")
     st.write(f"- 추천 접합방식: **{recommended_joint}**")
     st.write(f"- 추천 장비 전략: **{preferred_crane_type}**")
@@ -1166,13 +1281,22 @@ if run_clicked:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### D. 트레일러 검토")
+    st.markdown("### D. 운송 경로 허가 판정")
+    st.write(f"- 경로 판정: **{route_eval['route_status']}**")
+    st.write(f"- 특수허가 필요 여부: **{bool_ko(route_eval['permit_needed'])}**")
+    st.write(f"- 적용 높이 기준: **{route_eval['legal_height_limit_m']:.1f}m**")
+    for reason in route_eval['reasons']:
+        st.write(f"- {reason}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="result-card">', unsafe_allow_html=True)
+    st.markdown("### E. 트레일러 검토")
     trailer_df = pd.DataFrame(trailer_candidates)
     st.dataframe(trailer_df, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### E. 양중 검토")
+    st.markdown("### F. 양중 검토")
     st.write(f"- 필요 양중하중 = (모듈 자중 {module_weight_t:.2f}t + 인양보조구 {rigging_weight_t:.2f}t) × 안전계수 {safety_factor:.2f}")
     st.write(f"- 계산 결과 필요 양중하중: **{needed_lifting_t:.2f}t**")
     st.write(f"- 필요 작업반경: **{required_radius_m:.2f}m**")
@@ -1182,7 +1306,7 @@ if run_clicked:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### F. 구조/접합 추천 근거")
+    st.markdown("### G. 구조/접합 추천 근거")
     st.write("**구조방식 추천 근거**")
     for reason in structure_reasons:
         st.write(f"- {reason}")
@@ -1192,14 +1316,14 @@ if run_clicked:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### G. 운송 리스크 세부")
+    st.markdown("### H. 운송 리스크 세부")
     for reason in transport_reasons:
         st.write(f"- {reason}")
     st.write(f"- 종합 판정: **{transport_risk_bucket(transport_score)}**")
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### H. 설치 리스크 세부")
+    st.markdown("### I. 설치 리스크 세부")
     for reason in install_reasons:
         st.write(f"- {reason}")
     st.write(f"- 종합 판정: **{transport_risk_bucket(install_score)}**")
