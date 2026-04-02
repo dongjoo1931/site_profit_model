@@ -27,32 +27,39 @@ st.markdown(
     """
 <style>
 :root {
-    --bg: #f4f7fb;
+    --bg: #f6f7fb;
     --card: #ffffff;
-    --line: #dfe6f1;
-    --text: #142033;
-    --muted: #5b6b82;
-    --primary: #153a6b;
-    --primary-soft: #eaf1fb;
-    --accent: #f08c2e;
-    --ok: #137b46;
-    --warn: #b7791f;
-    --bad: #be2d2d;
+    --line: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --primary: #1f3a5f;
+    --primary-soft: #eef3f8;
+    --accent: #3b82f6;
+    --ok: #166534;
+    --warn: #a16207;
+    --bad: #b91c1c;
 }
 
 html, body, [data-testid="stAppViewContainer"] {
-    background: linear-gradient(180deg, #f6f9fc 0%, #edf3f9 100%);
+    background: var(--bg);
     color: var(--text);
 }
 
 .block-container {
-    padding-top: 1.2rem;
-    padding-bottom: 2rem;
-    max-width: 1500px;
+    padding-top: 1rem;
+    padding-bottom: 2.2rem;
+    max-width: 1600px;
 }
 
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #122844 0%, #183b66 100%);
+    background: #f3f4f6;
+    border-right: 1px solid #d1d5db;
+    min-width: 420px !important;
+    max-width: 420px !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding: 1.1rem 1rem 2rem 1rem;
 }
 
 [data-testid="stSidebar"] label,
@@ -60,7 +67,7 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span,
 [data-testid="stSidebar"] div {
-    color: white;
+    color: #111827;
 }
 
 [data-testid="stSidebar"] input,
@@ -72,6 +79,8 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] [data-baseweb="select"] > div {
     color: #111827 !important;
     background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    min-height: 48px !important;
 }
 
 [data-testid="stSidebar"] [data-baseweb="select"] * {
@@ -82,71 +91,80 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] .stTextInput input {
     color: #111827 !important;
     -webkit-text-fill-color: #111827 !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+    border: 1px solid #d1d5db !important;
 }
 
-[data-testid="stSidebar"] .stRadio label,
-[data-testid="stSidebar"] .stSlider label {
-    color: white !important;
+[data-testid="stSidebar"] .stTextInput,
+[data-testid="stSidebar"] .stNumberInput,
+[data-testid="stSidebar"] .stSelectbox,
+[data-testid="stSidebar"] .stRadio,
+[data-testid="stSidebar"] .stSlider {
+    margin-bottom: 0.7rem;
 }
 
 .hero {
-    background: linear-gradient(135deg, #102742 0%, #1e4a7d 60%, #2f6aa8 100%);
-    border-radius: 24px;
-    padding: 1.6rem 1.8rem;
-    color: white;
-    box-shadow: 0 18px 40px rgba(16,39,66,0.18);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1.4rem 1.5rem;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     margin-bottom: 1rem;
 }
 .hero-title {
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 900;
-    line-height: 1.25;
-    margin-bottom: 0.4rem;
+    line-height: 1.3;
+    margin-bottom: 0.45rem;
+    color: var(--primary);
 }
 .hero-sub {
-    font-size: 15px;
-    opacity: 0.92;
-    line-height: 1.55;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.65;
 }
 .hero-tag {
     display: inline-block;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.18);
+    background: var(--primary-soft);
+    border: 1px solid #d8e3ef;
     border-radius: 999px;
     padding: 0.35rem 0.75rem;
     font-size: 12px;
     font-weight: 700;
+    color: var(--primary);
     margin-bottom: 0.8rem;
 }
 
 .section-card {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 1.15rem 1.2rem;
-    box-shadow: 0 10px 26px rgba(21,37,63,0.05);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     margin-bottom: 1rem;
 }
 .section-title {
     font-size: 18px;
     font-weight: 800;
     color: var(--primary);
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.75rem;
 }
 .section-desc {
     font-size: 13px;
     color: var(--muted);
-    margin-top: -0.35rem;
-    margin-bottom: 0.9rem;
+    margin-top: -0.2rem;
+    margin-bottom: 0.8rem;
 }
 
 .metric-card {
     background: white;
     border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 1rem 1rem 0.9rem 1rem;
-    min-height: 118px;
-    box-shadow: 0 8px 24px rgba(18,40,68,0.05);
+    border-radius: 16px;
+    padding: 1rem;
+    min-height: 112px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
 }
 .metric-label {
     font-size: 13px;
@@ -155,10 +173,10 @@ html, body, [data-testid="stAppViewContainer"] {
     font-weight: 700;
 }
 .metric-value {
-    font-size: 25px;
+    font-size: 24px;
     font-weight: 900;
     color: var(--text);
-    line-height: 1.15;
+    line-height: 1.2;
 }
 .metric-note {
     font-size: 12px;
@@ -173,18 +191,18 @@ html, body, [data-testid="stAppViewContainer"] {
     font-size: 12px;
     font-weight: 800;
 }
-.badge-ok { background: #e6f7ee; color: var(--ok); }
-.badge-warn { background: #fff4de; color: var(--warn); }
-.badge-bad { background: #fde7e7; color: var(--bad); }
-.badge-neutral { background: #edf3fb; color: var(--primary); }
+.badge-ok { background: #ecfdf3; color: var(--ok); }
+.badge-warn { background: #fffbeb; color: var(--warn); }
+.badge-bad { background: #fef2f2; color: var(--bad); }
+.badge-neutral { background: #eff6ff; color: #1d4ed8; }
 
 .result-hero {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-left: 8px solid var(--accent);
-    border-radius: 22px;
-    padding: 1.25rem 1.3rem;
-    box-shadow: 0 12px 30px rgba(21,37,63,0.06);
+    border-left: 6px solid var(--accent);
+    border-radius: 18px;
+    padding: 1.2rem 1.25rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
     margin-bottom: 1rem;
 }
 .result-title {
@@ -193,17 +211,17 @@ html, body, [data-testid="stAppViewContainer"] {
     font-weight: 700;
 }
 .result-value {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 900;
     color: var(--primary);
     margin-top: 0.15rem;
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 12px;
+    border-radius: 10px;
     background: white;
     border: 1px solid var(--line);
     padding-left: 0.9rem;
@@ -212,24 +230,38 @@ html, body, [data-testid="stAppViewContainer"] {
 .stTabs [aria-selected="true"] {
     background: var(--primary-soft) !important;
     color: var(--primary) !important;
-    border-color: #bfd1ea !important;
+    border-color: #c9d7e6 !important;
 }
 
 .stButton > button {
     width: 100%;
-    height: 3rem;
-    border-radius: 14px;
-    border: none;
-    background: linear-gradient(135deg, #f08c2e 0%, #ef6f2e 100%);
+    height: 3.1rem;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #1f3a5f;
     color: white;
     font-weight: 800;
     font-size: 16px;
-    box-shadow: 0 10px 24px rgba(240, 140, 46, 0.25);
+    box-shadow: none;
 }
 
 .small-note {
     color: var(--muted);
     font-size: 12px;
+}
+
+.sidebar-group {
+    background: #ffffff;
+    border: 1px solid #dfe3e8;
+    border-radius: 14px;
+    padding: 0.9rem 0.9rem 0.25rem 0.9rem;
+    margin-bottom: 0.9rem;
+}
+.sidebar-group-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1f3a5f;
+    margin-bottom: 0.7rem;
 }
 </style>
 """,
@@ -1147,14 +1179,15 @@ def bar_compare_df(rc_total: float, modular_total: float) -> pd.DataFrame:
 # SIDEBAR INPUT
 # ============================================================
 st.sidebar.markdown("## 입력 패널")
-st.sidebar.caption("왼쪽에서 조건을 입력하고, 오른쪽 대시보드에서 결과를 확인합니다.")
+st.sidebar.caption("입력 항목을 그룹별로 정리했습니다. 필요한 조건을 찾기 쉽게 묶어서 배치했습니다.")
 
+st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">기본 정보</div>', unsafe_allow_html=True)
 project_name = st.sidebar.text_input("사업명", value="수익성극대화를위한부지맞춤형신축매입임대사업모델제안")
 site_address = st.sidebar.text_input("부지 도로명주소", value="")
 building_use = st.sidebar.selectbox("건물 용도", ["공동주택", "기숙사", "학교", "병원", "업무시설", "복합용도"])
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 부지·동선 조건")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">부지 · 동선 조건</div>', unsafe_allow_html=True)
 site_area_m2 = st.sidebar.number_input("대지면적 (㎡)", min_value=0.0, value=500.0, step=10.0)
 site_frontage_m = st.sidebar.number_input("전면도로 길이 / 정차 가능 길이 (m)", min_value=0.0, value=18.0, step=1.0)
 road_width_m = st.sidebar.number_input("전면 도로폭 (m)", min_value=0.0, value=6.0, step=0.5)
@@ -1169,8 +1202,8 @@ bridge_tunnel_height_limit_m = st.sidebar.number_input("경로상 교량/터널 
 managed_road_42m = st.sidebar.radio("관리도로 4.2m 적용 여부", ["아니오", "예"], horizontal=True)
 road_side_short_term = st.sidebar.radio("도로변 단기 설치 중심 현장인가?", ["예", "아니오"], horizontal=True)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 건물 조건")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">건물 조건</div>', unsafe_allow_html=True)
 gross_area_m2 = st.sidebar.number_input("연면적 (㎡)", min_value=0.0, value=1500.0, step=10.0)
 floors = st.sidebar.number_input("층수", min_value=1, max_value=80, value=5, step=1)
 building_length_m = st.sidebar.number_input("건물 길이 (m)", min_value=1.0, value=30.0, step=1.0)
@@ -1181,8 +1214,8 @@ repeatability_score = st.sidebar.slider("반복형 평면 정도", 1, 5, 3)
 public_space_ratio = st.sidebar.slider("공용공간 비중", 1, 5, 3)
 open_plan_need = st.sidebar.slider("개방형 평면 요구", 1, 5, 3)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 모듈 조건")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">모듈 조건</div>', unsafe_allow_html=True)
 module_input_mode = st.sidebar.radio("모듈 선정 방식", ["자동 추천", "DB 선택", "직접 입력"], horizontal=True)
 
 recommended_module = None
@@ -1236,8 +1269,8 @@ rigging_weight_t = st.sidebar.number_input("인양보조구/슬링 등 추가 �
 safety_factor = st.sidebar.number_input("안전계수", min_value=1.00, value=1.15, step=0.05)
 jit_install = st.sidebar.radio("JIT(Just-In-Time) 설치 계획", ["예", "아니오"], horizontal=True) == "예"
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 비용·공기 가정")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">비용 · 공기 가정</div>', unsafe_allow_html=True)
 rc_unit_cost_krw_per_m2 = st.sidebar.number_input("RC 기준 공사비 (원/㎡)", min_value=0.0, value=2400000.0, step=50000.0)
 modular_factory_unit_cost_krw_per_m2 = st.sidebar.number_input("모듈러 공장 제작 공사비 (원/㎡)", min_value=0.0, value=2550000.0, step=50000.0)
 modular_direct_premium_rate = st.sidebar.slider("모듈러 직접공사비 할증률", 0.0, 0.30, 0.08, 0.01)
@@ -1252,6 +1285,8 @@ tower_usage_months = st.sidebar.number_input("타워크레인 사용 개월 수"
 
 if "analysis_ready" not in st.session_state:
     st.session_state.analysis_ready = False
+
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 run_analysis = st.sidebar.button("분석 실행")
 if run_analysis:
