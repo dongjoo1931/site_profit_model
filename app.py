@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import math
@@ -10,62 +9,197 @@ import streamlit as st
 from geopy.geocoders import Nominatim
 
 
+# ============================================================
+# PAGE CONFIG
+# ============================================================
 st.set_page_config(
-    page_title="STEP 1 - 부지별 RC 대비 모듈러 공사비 비교 프로그램",
+    page_title="수익성극대화를위한부지맞춤형신축매입임대사업모델제안",
     page_icon="🏗️",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
+
+# ============================================================
+# STYLE
+# ============================================================
 st.markdown(
     """
 <style>
-.main-title {
-    font-size: 34px;
-    font-weight: 800;
-    margin-bottom: 0.2rem;
+:root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --line: #dfe6f1;
+    --text: #142033;
+    --muted: #5b6b82;
+    --primary: #153a6b;
+    --primary-soft: #eaf1fb;
+    --accent: #f08c2e;
+    --ok: #137b46;
+    --warn: #b7791f;
+    --bad: #be2d2d;
 }
-.sub-title {
+
+html, body, [data-testid="stAppViewContainer"] {
+    background: linear-gradient(180deg, #f6f9fc 0%, #edf3f9 100%);
+    color: var(--text);
+}
+
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 2rem;
+    max-width: 1500px;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #122844 0%, #183b66 100%);
+}
+
+[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+.hero {
+    background: linear-gradient(135deg, #102742 0%, #1e4a7d 60%, #2f6aa8 100%);
+    border-radius: 24px;
+    padding: 1.6rem 1.8rem;
+    color: white;
+    box-shadow: 0 18px 40px rgba(16,39,66,0.18);
+    margin-bottom: 1rem;
+}
+.hero-title {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.25;
+    margin-bottom: 0.4rem;
+}
+.hero-sub {
+    font-size: 15px;
+    opacity: 0.92;
+    line-height: 1.55;
+}
+.hero-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+}
+
+.section-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1.15rem 1.2rem;
+    box-shadow: 0 10px 26px rgba(21,37,63,0.05);
+    margin-bottom: 1rem;
+}
+.section-title {
     font-size: 18px;
-    color: #555;
-    margin-bottom: 1.2rem;
-}
-.block-card {
-    background-color: #f8f9fb;
-    padding: 1.2rem 1.2rem 0.8rem 1.2rem;
-    border-radius: 16px;
-    border: 1px solid #e6e8ef;
-    margin-bottom: 1rem;
-}
-.result-card {
-    background-color: #ffffff;
-    padding: 1.2rem;
-    border-radius: 16px;
-    border: 1px solid #e6e8ef;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-    margin-bottom: 1rem;
-}
-.kpi {
-    background: #ffffff;
-    border: 1px solid #e6e8ef;
-    border-radius: 16px;
-    padding: 1rem;
-    height: 100%;
-}
-.kpi-title {
-    font-size: 14px;
-    color: #666;
-}
-.kpi-value {
-    font-size: 24px;
     font-weight: 800;
-    margin-top: 0.2rem;
+    color: var(--primary);
+    margin-bottom: 0.8rem;
 }
+.section-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: -0.35rem;
+    margin-bottom: 0.9rem;
+}
+
+.metric-card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 1rem 1rem 0.9rem 1rem;
+    min-height: 118px;
+    box-shadow: 0 8px 24px rgba(18,40,68,0.05);
+}
+.metric-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+    font-weight: 700;
+}
+.metric-value {
+    font-size: 25px;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.15;
+}
+.metric-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 0.35rem;
+}
+
+.badge-ok, .badge-warn, .badge-bad, .badge-neutral {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 12px;
+    font-weight: 800;
+}
+.badge-ok { background: #e6f7ee; color: var(--ok); }
+.badge-warn { background: #fff4de; color: var(--warn); }
+.badge-bad { background: #fde7e7; color: var(--bad); }
+.badge-neutral { background: #edf3fb; color: var(--primary); }
+
+.result-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid var(--line);
+    border-left: 8px solid var(--accent);
+    border-radius: 22px;
+    padding: 1.25rem 1.3rem;
+    box-shadow: 0 12px 30px rgba(21,37,63,0.06);
+    margin-bottom: 1rem;
+}
+.result-title {
+    font-size: 15px;
+    color: var(--muted);
+    font-weight: 700;
+}
+.result-value {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--primary);
+    margin-top: 0.15rem;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.5rem;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 12px;
+    background: white;
+    border: 1px solid var(--line);
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+}
+.stTabs [aria-selected="true"] {
+    background: var(--primary-soft) !important;
+    color: var(--primary) !important;
+    border-color: #bfd1ea !important;
+}
+
 .stButton > button {
     width: 100%;
-    border-radius: 12px;
-    height: 3.2rem;
-    font-size: 18px;
-    font-weight: 700;
+    height: 3rem;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #f08c2e 0%, #ef6f2e 100%);
+    color: white;
+    font-weight: 800;
+    font-size: 16px;
+    box-shadow: 0 10px 24px rgba(240, 140, 46, 0.25);
+}
+
+.small-note {
+    color: var(--muted);
+    font-size: 12px;
 }
 </style>
 """,
@@ -73,6 +207,9 @@ st.markdown(
 )
 
 
+# ============================================================
+# DATA MODELS
+# ============================================================
 @dataclass
 class ModuleType:
     name: str
@@ -111,10 +248,6 @@ class ModuleType:
     @property
     def prefab_rate_text(self) -> str:
         return f"{int(round(self.prefab_rate_min * 100))}~{int(round(self.prefab_rate_max * 100))}%"
-
-    @property
-    def module_area_m2(self) -> float:
-        return self.width_m * self.length_m
 
 
 @dataclass
@@ -404,24 +537,52 @@ CRANE_DB: List[CraneSpec] = [
     CraneSpec("Liebherr 340 EC-B 16", "타워크레인", 16.0, 78.0, 2.1, 84.7, "탑슬루잉", footprint_desc="기초 필요"),
     CraneSpec("Potain MCT 565 M20", "타워크레인", 20.0, 80.0, 4.0, 84.2, "탑슬루잉", footprint_desc="기초 필요"),
     CraneSpec("Crawler Crane 100t", "크롤러크레인", 100.0, 52.0, 8.0, 64.0, "대형/야적장형", hourly_cost_krw=115612, footprint_desc="넓은 작업장과 지반 확보 필요"),
-    CraneSpec("Crawler Crane 120t", "크롤러크레인", 120.0, 64.0, 11.0, 73.2, "대형/야적장형", footprint_desc="넓은 작업장과 지반 확보 필요"),
+    CraneSpec("Crawler Crane 120t", "크롤러크레인", 120.0, 64.0, 11.0, 73.2, "대형/야적장형", hourly_cost_krw=140000, footprint_desc="넓은 작업장과 지반 확보 필요"),
     CraneSpec("Crawler Crane 300t", "크롤러크레인", 300.0, 143.0, 18.0, 169.0, "초대형", hourly_cost_krw=502517, footprint_desc="매우 넓은 작업장과 고강도 지반 필요"),
     CraneSpec("Luffing Crane 12t", "러핑크레인", 12.0, 60.0, 2.6, 200.0, "도심 고층형", footprint_desc="좁은 회전공간에 상대적으로 유리"),
     CraneSpec("Luffing Crane 24t", "러핑크레인", 24.0, 60.0, 4.0, 210.0, "도심 고층형", footprint_desc="좁은 회전공간에 상대적으로 유리"),
-    CraneSpec("Luffing Crane 64t", "러핑크레인", 64.0, 70.0, 10.0, 300.0, "도심 초고층형", footprint_desc="초고층 및 협소 회전조건 대응"),
 ]
 
-PUMP_TRUCK_COSTS = {
-    "21m": 51698, "28m": 61567, "32m": 72600, "36m": 90024,
-    "41m": 93192, "43m": 118140, "47m": 129579, "52m": 137192,
-}
-MIXER_TRUCK_HOURLY = 25948
-READYMIX_PRICE_PER_M3 = 95500
+
+# ============================================================
+# UTILS
+# ============================================================
+def format_krw(value: float) -> str:
+    return f"{int(round(value)):,}원"
+
+
+def bool_ko(flag: bool) -> str:
+    return "예" if flag else "아니오"
+
+
+def grade_badge(label: str) -> str:
+    if label in ["가능", "모듈러 우세", "안전한 편", "낮음"]:
+        klass = "badge-ok"
+    elif label in ["조건부 가능", "조건부 모듈러 우세", "주의 필요", "중간", "높음"]:
+        klass = "badge-warn"
+    elif label in ["불가", "RC 우세", "매우 민감", "매우 높음"]:
+        klass = "badge-bad"
+    else:
+        klass = "badge-neutral"
+    return f'<span class="{klass}">{label}</span>'
+
+
+def metric_box(label: str, value: str, note: str = "") -> None:
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value">{value}</div>
+            <div class="metric-note">{note}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def geocode_address(address: str) -> Tuple[Optional[float], Optional[float]]:
     try:
-        geolocator = Nominatim(user_agent="modular_rc_step1_app")
+        geolocator = Nominatim(user_agent="osc_profitability_app")
         location = geolocator.geocode(address, timeout=10)
         if location:
             return location.latitude, location.longitude
@@ -435,42 +596,35 @@ def render_simple_map(address: str) -> bool:
     if lat is None or lon is None:
         st.warning("주소를 찾지 못했습니다. 도로명주소를 다시 확인해 주세요.")
         return False
-    st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}))
+    st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}), zoom=15)
     st.caption(f"위도: {lat:.6f} / 경도: {lon:.6f}")
     return True
-
-
-def format_krw(value: float) -> str:
-    return f"{int(round(value)):,}원"
-
-
-def bool_ko(flag: bool) -> str:
-    return "예" if flag else "아니오"
 
 
 def module_db_dataframe() -> pd.DataFrame:
     rows = []
     for module in MODULE_DB.values():
-        rows.append({
-            "모듈 타입": module.name,
-            "구조방식": module.structure,
-            "폭 범위": module.width_range_text,
-            "길이 범위": module.length_range_text,
-            "높이 범위": module.height_range_text,
-            "중량 범위": module.weight_range_text,
-            "권장 층수": module.recommended_floor_range,
-            "대표 트레일러": module.representative_trailer,
-            "권장 크레인군": module.recommended_crane_group,
-            "공장 제작률": module.prefab_rate_text,
-            "설치 난이도 계수": module.install_difficulty_coeff,
-            "운송 난이도 계수": module.transport_difficulty_coeff,
-            "대개구부": bool_ko(module.large_opening),
-            "반복형 적합도": module.repeatability_score,
-            "공용공간 적합도": module.public_space_score,
-            "개방형 적합도": module.open_plan_score,
-            "기본 효율계수": module.base_efficiency_ratio,
-            "특징": module.note_text,
-        })
+        rows.append(
+            {
+                "모듈 타입": module.name,
+                "구조방식": module.structure,
+                "폭 범위": module.width_range_text,
+                "길이 범위": module.length_range_text,
+                "높이 범위": module.height_range_text,
+                "중량 범위": module.weight_range_text,
+                "권장 층수": module.recommended_floor_range,
+                "대표 트레일러": module.representative_trailer,
+                "권장 크레인군": module.recommended_crane_group,
+                "공장 제작률": module.prefab_rate_text,
+                "설치 난이도": module.install_difficulty_coeff,
+                "운송 난이도": module.transport_difficulty_coeff,
+                "대개구부": bool_ko(module.large_opening),
+                "반복형 적합도": module.repeatability_score,
+                "공용공간 적합도": module.public_space_score,
+                "개방형 적합도": module.open_plan_score,
+                "기본 효율계수": module.base_efficiency_ratio,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -519,16 +673,19 @@ def select_vehicle_specs(module_length_m: float, module_width_m: float, module_h
     for trailer in TRAILER_DB:
         transport_height = trailer.deck_height_m + module_height_m
         total_weight_t = module_weight_t + trailer.vehicle_weight_t
-        candidates.append({
-            "운송 차량": trailer.name,
-            "적재면 길이(m)": trailer.deck_length_m,
-            "적재면 폭(m)": trailer.deck_width_m,
-            "적재면 높이(m)": trailer.deck_height_m,
-            "최대적재량(t)": trailer.payload_t,
-            "운송 높이(m)": round(transport_height, 2),
-            "총중량 추정(t)": round(total_weight_t, 2),
-            "비고": "총중량 40t 초과 가능성 검토 필요" if total_weight_t > 40.0 else "총중량 기준 내",
-        })
+        candidates.append(
+            {
+                "운송 차량": trailer.name,
+                "적재면 길이(m)": trailer.deck_length_m,
+                "적재면 폭(m)": trailer.deck_width_m,
+                "적재면 높이(m)": trailer.deck_height_m,
+                "최대적재량(t)": trailer.payload_t,
+                "운송 높이(m)": round(transport_height, 2),
+                "총중량 추정(t)": round(total_weight_t, 2),
+                "조향 방식": trailer.steering,
+                "비고": "총중량 40t 초과 가능성 검토 필요" if total_weight_t > 40.0 else "총중량 기준 내",
+            }
+        )
     return candidates
 
 
@@ -752,88 +909,30 @@ def evaluate_cranes(
         if crane.crane_group in ["타워크레인", "러핑크레인"]:
             operational_note.append("기초/설치해체 계획 필요")
 
-        rows.append({
-            "장비": crane.name,
-            "장비군": crane.crane_group,
-            "최대하중(t)": crane.max_capacity_t,
-            "최대반경(m)": crane.max_radius_m,
-            "끝단하중(t)": crane.tip_load_t,
-            "최대Hook높이(m)": crane.max_hook_height_m,
-            "해당반경 허용하중(t)": round(allowable, 2),
-            "필요양중하중(t)": round(needed_lifting_t, 2),
-            "여유율": round(margin, 2),
-            "여유율판정": risk_level_from_margin(margin),
-            "반경적합": radius_ok,
-            "높이적합": hook_ok,
-            "하중적합": load_ok,
-            "최종판정": "가능" if (radius_ok and hook_ok and load_ok) else "불가",
-            "비고": "; ".join(operational_note) if operational_note else "-",
-            "월임대료": crane.monthly_rent_krw or 0,
-            "설치해체비": crane.setup_cost_krw or 0,
-            "시간당손료": crane.hourly_cost_krw or 0,
-        })
-    rows.sort(key=lambda x: (x["최종판정"] != "가능", x["여유율"] if x["여유율"] else 999, x["최대하중(t)"]))
+        rows.append(
+            {
+                "장비": crane.name,
+                "장비군": crane.crane_group,
+                "최대하중(t)": crane.max_capacity_t,
+                "최대반경(m)": crane.max_radius_m,
+                "끝단하중(t)": crane.tip_load_t,
+                "최대Hook높이(m)": crane.max_hook_height_m,
+                "해당반경 허용하중(t)": round(allowable, 2),
+                "필요양중하중(t)": round(needed_lifting_t, 2),
+                "여유율": round(margin, 2),
+                "여유율판정": risk_level_from_margin(margin),
+                "반경적합": radius_ok,
+                "높이적합": hook_ok,
+                "하중적합": load_ok,
+                "최종판정": "가능" if (radius_ok and hook_ok and load_ok) else "불가",
+                "비고": "; ".join(operational_note) if operational_note else "-",
+                "월임대료": crane.monthly_rent_krw or 0,
+                "설치해체비": crane.setup_cost_krw or 0,
+                "시간당손료": crane.hourly_cost_krw or 0,
+            }
+        )
+    rows.sort(key=lambda x: (x["최종판정"] != "가능", -x["여유율"]))
     return rows
-
-
-def recommend_crane_type(
-    module_weight_t: float,
-    floors: int,
-    required_radius_m: float,
-    road_side_short_term: bool,
-    available_staging_m2: float,
-    module_name: str,
-) -> str:
-    if module_name in MODULE_DB:
-        return MODULE_DB[module_name].recommended_crane_group
-    if road_side_short_term and module_weight_t <= 25 and floors <= 8:
-        return "트럭크레인 우선 검토"
-    if available_staging_m2 >= 500 and module_weight_t >= 25:
-        return "크롤러크레인 우선 검토"
-    if floors >= 10:
-        return "타워크레인 또는 러핑크레인 우선 검토"
-    if required_radius_m <= 25 and module_weight_t <= 20:
-        return "트럭크레인 또는 중소형 타워크레인 검토"
-    return "타워크레인 우선 검토"
-
-
-def cost_model(
-    gross_area_m2: float,
-    rc_unit_cost_krw_per_m2: float,
-    modular_factory_unit_cost_krw_per_m2: float,
-    module_count: int,
-    transport_cost_per_module_krw: float,
-    installation_cost_per_module_krw: float,
-    permit_cost_per_module_krw: float,
-    prefab_rate: float,
-    schedule_reduction_months: float,
-    monthly_financing_saving_krw: float,
-    small_project_penalty_rate: float,
-    modular_direct_premium_rate: float,
-    crane_cost_krw: float,
-    rc_equipment_cost_krw: float,
-) -> Dict[str, float]:
-    rc_total = gross_area_m2 * rc_unit_cost_krw_per_m2 + rc_equipment_cost_krw
-
-    prefab_discount = max(0.0, (prefab_rate - 0.60) * 0.10)
-    adjusted_modular_unit = modular_factory_unit_cost_krw_per_m2 * (1.0 - prefab_discount)
-    adjusted_modular_unit *= (1.0 + modular_direct_premium_rate)
-    adjusted_modular_unit *= (1.0 + small_project_penalty_rate)
-
-    logistics_total = module_count * (
-        transport_cost_per_module_krw + installation_cost_per_module_krw + permit_cost_per_module_krw
-    )
-    schedule_saving_total = schedule_reduction_months * monthly_financing_saving_krw
-
-    modular_total = gross_area_m2 * adjusted_modular_unit + logistics_total + crane_cost_krw - schedule_saving_total
-    return {
-        "rc_total": rc_total,
-        "modular_total": modular_total,
-        "difference": modular_total - rc_total,
-        "schedule_saving_total": schedule_saving_total,
-        "logistics_total": logistics_total,
-        "adjusted_modular_unit": adjusted_modular_unit,
-    }
 
 
 def recommend_method(
@@ -966,70 +1065,95 @@ def auto_select_module(
     return scored[0]["module"], scored
 
 
-st.markdown('<div class="main-title">STEP 1. 부지별 RC 대비 모듈러 공사비 비교 프로그램</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">현장 접근성, 운송, 양중, 적치, 구조방식, 공장제작률, 공기단축을 반영한 STEP 1 비교 프로그램입니다.</div>', unsafe_allow_html=True)
+def cost_model(
+    gross_area_m2: float,
+    rc_unit_cost_krw_per_m2: float,
+    modular_factory_unit_cost_krw_per_m2: float,
+    module_count: int,
+    transport_cost_per_module_krw: float,
+    installation_cost_per_module_krw: float,
+    permit_cost_per_module_krw: float,
+    prefab_rate: float,
+    schedule_reduction_months: float,
+    monthly_financing_saving_krw: float,
+    small_project_penalty_rate: float,
+    modular_direct_premium_rate: float,
+    crane_cost_krw: float,
+    rc_equipment_cost_krw: float,
+) -> Dict[str, float]:
+    rc_total = gross_area_m2 * rc_unit_cost_krw_per_m2 + rc_equipment_cost_krw
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("1) 기본 정보")
-col_a, col_b = st.columns(2)
-with col_a:
-    project_name = st.text_input("사업명", placeholder="예: 수원시 ○○동 신축매입임대 사업")
-    site_address = st.text_input("부지 도로명주소", placeholder="예: 경기도 수원시 영통구 ○○로 00")
-with col_b:
-    building_use = st.selectbox("건물 용도", ["공동주택", "기숙사", "학교", "병원", "업무시설", "복합용도"])
-st.markdown('</div>', unsafe_allow_html=True)
+    prefab_discount = max(0.0, (prefab_rate - 0.60) * 0.10)
+    adjusted_modular_unit = modular_factory_unit_cost_krw_per_m2 * (1.0 - prefab_discount)
+    adjusted_modular_unit *= (1.0 + modular_direct_premium_rate)
+    adjusted_modular_unit *= (1.0 + small_project_penalty_rate)
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("2) 부지 위치 확인")
-if site_address.strip():
-    if render_simple_map(site_address.strip()):
-        st.caption("입력 위치 확인")
-else:
-    st.info("도로명주소를 입력하면 지도가 표시됩니다.")
-st.markdown('</div>', unsafe_allow_html=True)
+    logistics_total = module_count * (
+        transport_cost_per_module_krw + installation_cost_per_module_krw + permit_cost_per_module_krw
+    )
+    schedule_saving_total = schedule_reduction_months * monthly_financing_saving_krw
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("3) 부지·동선·적치 조건")
-col1, col2, col3 = st.columns(3)
-with col1:
-    site_area_m2 = st.number_input("대지면적 (㎡)", min_value=0.0, value=500.0, step=10.0)
-    site_frontage_m = st.number_input("전면도로 길이 / 정차 가능 길이 (m)", min_value=0.0, value=18.0, step=1.0)
-    road_width_m = st.number_input("전면 도로폭 (m)", min_value=0.0, value=6.0, step=0.5)
-    corner_site = st.radio("코너 부지 여부", ["아니오", "예"], horizontal=True)
-with col2:
-    turn_condition = st.selectbox("회전 조건", ["직진 위주", "코너 1개", "코너 2개 이상", "협소 코너 다수/U턴 필요"])
-    obstacle_level = st.selectbox("장애물 수준", ["없음", "경미", "전선/가로수 일부", "전면부 장애 심함"])
-    pavement_level = st.selectbox("노면/경사 수준", ["양호", "보통", "경사/포장불량 일부", "급경사/불량 심함"])
-    illegal_parking_constant = st.radio("상시 불법주정차 영향", ["낮음", "중간", "높음"], horizontal=True)
-with col3:
-    staging_area_m2 = st.number_input("적치 가능 면적 (㎡)", min_value=0.0, value=120.0, step=10.0)
-    trailer_stop_zone_m = st.number_input("트레일러 정차 가능 구간 (m)", min_value=0.0, value=15.0, step=1.0)
-    crane_candidate_offset_m = st.number_input("크레인 설치 후보점의 건물 외곽 이격거리 (m)", min_value=0.0, value=6.0, step=1.0)
-    bridge_tunnel_height_limit_m = st.number_input("경로상 교량/터널 높이 제한 (m, 없으면 0)", min_value=0.0, value=0.0, step=0.1)
-    managed_road_42m = st.radio("관리도로 4.2m 적용 여부", ["아니오", "예"], horizontal=True)
-    road_side_short_term = st.radio("도로변 단기 설치 중심 현장인가?", ["예", "아니오"], horizontal=True)
-st.markdown('</div>', unsafe_allow_html=True)
+    modular_total = gross_area_m2 * adjusted_modular_unit + logistics_total + crane_cost_krw - schedule_saving_total
+    return {
+        "rc_total": rc_total,
+        "modular_total": modular_total,
+        "difference": modular_total - rc_total,
+        "schedule_saving_total": schedule_saving_total,
+        "logistics_total": logistics_total,
+        "adjusted_modular_unit": adjusted_modular_unit,
+    }
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("4) 건물 조건")
-col1, col2, col3 = st.columns(3)
-with col1:
-    gross_area_m2 = st.number_input("연면적 (㎡)", min_value=0.0, value=1500.0, step=10.0)
-    floors = st.number_input("층수", min_value=1, max_value=80, value=5, step=1)
-    building_length_m = st.number_input("건물 길이 (m)", min_value=1.0, value=30.0, step=1.0)
-with col2:
-    building_width_m = st.number_input("건물 폭 (m)", min_value=1.0, value=14.0, step=1.0)
-    top_install_height_m = st.number_input("최고 설치 높이 (m)", min_value=1.0, value=18.0, step=1.0)
-    obstacle_height_m = st.number_input("간섭 장애물 최고 높이 (m)", min_value=0.0, value=0.0, step=1.0)
-with col3:
-    repeatability_score = st.slider("반복형 평면 정도", 1, 5, 3)
-    public_space_ratio = st.slider("공용공간 비중", 1, 5, 3)
-    open_plan_need = st.slider("개방형 평면 요구", 1, 5, 3)
-st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("5) 모듈 조건")
-module_input_mode = st.radio("모듈 선정 방식", ["자동 추천", "DB 선택", "직접 입력"], horizontal=True)
+def bar_compare_df(rc_total: float, modular_total: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "공법": ["RC", "OSC/모듈러"],
+            "총비용(원)": [rc_total, modular_total],
+        }
+    )
+
+
+# ============================================================
+# SIDEBAR INPUT
+# ============================================================
+st.sidebar.markdown("## 입력 패널")
+st.sidebar.caption("왼쪽에서 조건을 입력하고, 오른쪽 대시보드에서 결과를 확인합니다.")
+
+project_name = st.sidebar.text_input("사업명", value="수익성극대화를위한부지맞춤형신축매입임대사업모델제안")
+site_address = st.sidebar.text_input("부지 도로명주소", value="")
+building_use = st.sidebar.selectbox("건물 용도", ["공동주택", "기숙사", "학교", "병원", "업무시설", "복합용도"])
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 부지·동선 조건")
+site_area_m2 = st.sidebar.number_input("대지면적 (㎡)", min_value=0.0, value=500.0, step=10.0)
+site_frontage_m = st.sidebar.number_input("전면도로 길이 / 정차 가능 길이 (m)", min_value=0.0, value=18.0, step=1.0)
+road_width_m = st.sidebar.number_input("전면 도로폭 (m)", min_value=0.0, value=6.0, step=0.5)
+turn_condition = st.sidebar.selectbox("회전 조건", ["직진 위주", "코너 1개", "코너 2개 이상", "협소 코너 다수/U턴 필요"])
+obstacle_level = st.sidebar.selectbox("장애물 수준", ["없음", "경미", "전선/가로수 일부", "전면부 장애 심함"])
+pavement_level = st.sidebar.selectbox("노면/경사 수준", ["양호", "보통", "경사/포장불량 일부", "급경사/불량 심함"])
+illegal_parking_constant = st.sidebar.radio("상시 불법주정차 영향", ["낮음", "중간", "높음"], horizontal=True)
+staging_area_m2 = st.sidebar.number_input("적치 가능 면적 (㎡)", min_value=0.0, value=120.0, step=10.0)
+trailer_stop_zone_m = st.sidebar.number_input("트레일러 정차 가능 구간 (m)", min_value=0.0, value=15.0, step=1.0)
+crane_candidate_offset_m = st.sidebar.number_input("크레인 설치 후보점 이격거리 (m)", min_value=0.0, value=6.0, step=1.0)
+bridge_tunnel_height_limit_m = st.sidebar.number_input("경로상 교량/터널 높이 제한 (m, 없으면 0)", min_value=0.0, value=0.0, step=0.1)
+managed_road_42m = st.sidebar.radio("관리도로 4.2m 적용 여부", ["아니오", "예"], horizontal=True)
+road_side_short_term = st.sidebar.radio("도로변 단기 설치 중심 현장인가?", ["예", "아니오"], horizontal=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 건물 조건")
+gross_area_m2 = st.sidebar.number_input("연면적 (㎡)", min_value=0.0, value=1500.0, step=10.0)
+floors = st.sidebar.number_input("층수", min_value=1, max_value=80, value=5, step=1)
+building_length_m = st.sidebar.number_input("건물 길이 (m)", min_value=1.0, value=30.0, step=1.0)
+building_width_m = st.sidebar.number_input("건물 폭 (m)", min_value=1.0, value=14.0, step=1.0)
+top_install_height_m = st.sidebar.number_input("최고 설치 높이 (m)", min_value=1.0, value=18.0, step=1.0)
+obstacle_height_m = st.sidebar.number_input("간섭 장애물 최고 높이 (m)", min_value=0.0, value=0.0, step=1.0)
+repeatability_score = st.sidebar.slider("반복형 평면 정도", 1, 5, 3)
+public_space_ratio = st.sidebar.slider("공용공간 비중", 1, 5, 3)
+open_plan_need = st.sidebar.slider("개방형 평면 요구", 1, 5, 3)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 모듈 조건")
+module_input_mode = st.sidebar.radio("모듈 선정 방식", ["자동 추천", "DB 선택", "직접 입력"], horizontal=True)
 
 recommended_module = None
 module_ranking = []
@@ -1044,352 +1168,399 @@ if module_input_mode == "자동 추천":
         road_width_m=road_width_m,
         staging_area_m2=staging_area_m2,
     )
-    module_name = recommended_module.name
     selected_module = recommended_module
 elif module_input_mode == "DB 선택":
-    module_name = st.selectbox("모듈 타입", list(MODULE_DB.keys()))
-    selected_module = MODULE_DB[module_name]
+    module_name_from_db = st.sidebar.selectbox("모듈 타입", list(MODULE_DB.keys()))
+    selected_module = MODULE_DB[module_name_from_db]
 else:
-    module_name = "사용자 정의 모듈"
     selected_module = None
 
 if selected_module is not None:
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        module_length_m = st.number_input("모듈 길이 (m)", value=float(selected_module.length_m), step=0.1)
-    with col2:
-        module_width_m = st.number_input("모듈 폭 (m)", value=float(selected_module.width_m), step=0.1)
-    with col3:
-        module_height_m = st.number_input("모듈 높이 (m)", value=float(selected_module.height_m), step=0.1)
-    with col4:
-        module_weight_t = st.number_input("모듈 자중 (t)", value=float(selected_module.weight_t_default), step=0.1)
+    module_length_m = st.sidebar.number_input("모듈 길이 (m)", value=float(selected_module.length_m), step=0.1)
+    module_width_m = st.sidebar.number_input("모듈 폭 (m)", value=float(selected_module.width_m), step=0.1)
+    module_height_m = st.sidebar.number_input("모듈 높이 (m)", value=float(selected_module.height_m), step=0.1)
+    module_weight_t = st.sidebar.number_input("모듈 자중 (t)", value=float(selected_module.weight_t_default), step=0.1)
     module_form = selected_module.openness
-    module_desc = selected_module.desc
     module_eff_default = selected_module.base_efficiency_ratio
+    module_name = selected_module.name
 else:
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        module_length_m = st.number_input("모듈 길이 (m)", value=10.0, step=0.1)
-    with col2:
-        module_width_m = st.number_input("모듈 폭 (m)", value=3.2, step=0.1)
-    with col3:
-        module_height_m = st.number_input("모듈 높이 (m)", value=3.4, step=0.1)
-    with col4:
-        module_weight_t = st.number_input("모듈 자중 (t)", value=12.0, step=0.1)
-    module_form = st.selectbox("모듈 형식", ["corner-supported", "open-ended", "open-sided", "대개구부/비정형", "hybrid"])
-    module_desc = "사용자 정의"
+    module_length_m = st.sidebar.number_input("모듈 길이 (m)", value=10.0, step=0.1)
+    module_width_m = st.sidebar.number_input("모듈 폭 (m)", value=3.2, step=0.1)
+    module_height_m = st.sidebar.number_input("모듈 높이 (m)", value=3.4, step=0.1)
+    module_weight_t = st.sidebar.number_input("모듈 자중 (t)", value=12.0, step=0.1)
+    module_form = st.sidebar.selectbox("모듈 형식", ["corner-supported", "open-ended", "open-sided", "대개구부/비정형", "hybrid"])
     module_eff_default = 0.80
+    module_name = "사용자 정의 모듈"
 
-count_mode = st.radio("모듈 개수 입력 방식", ["자동 산정", "직접 입력"], horizontal=True)
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    if count_mode == "자동 산정":
-        module_efficiency_ratio = st.slider("모듈 면적 효율계수", min_value=0.50, max_value=0.95, value=float(module_eff_default), step=0.01)
-        module_count = estimate_module_count(gross_area_m2, module_length_m, module_width_m, module_efficiency_ratio)
-    else:
-        module_efficiency_ratio = float(module_eff_default)
-        module_count = st.number_input("총 모듈 개수", min_value=1, value=20, step=1)
-with col2:
-    prefab_default = round((selected_module.prefab_rate_min + selected_module.prefab_rate_max) / 2, 2) if selected_module is not None else 0.70
-    prefab_rate = st.slider("공장 제작 비율", min_value=0.30, max_value=0.95, value=float(prefab_default), step=0.05)
-with col3:
-    rigging_weight_t = st.number_input("인양보조구/슬링 등 추가 하중 (t)", min_value=0.0, value=0.8, step=0.1)
-with col4:
-    safety_factor = st.number_input("안전계수", min_value=1.00, value=1.15, step=0.05)
-
+count_mode = st.sidebar.radio("모듈 개수 입력 방식", ["자동 산정", "직접 입력"], horizontal=True)
 if count_mode == "자동 산정":
-    st.caption(f"자동 산정 모듈 개수: {module_count}개 | 모듈 바닥면적 {module_length_m * module_width_m:.2f}㎡ | 효율계수 {module_efficiency_ratio:.2f}")
+    module_efficiency_ratio = st.sidebar.slider("모듈 면적 효율계수", min_value=0.50, max_value=0.95, value=float(module_eff_default), step=0.01)
+    module_count = estimate_module_count(gross_area_m2, module_length_m, module_width_m, module_efficiency_ratio)
 else:
-    st.caption(f"총 모듈 개수: {int(module_count)}개")
-st.caption(module_desc)
+    module_efficiency_ratio = module_eff_default
+    module_count = st.sidebar.number_input("총 모듈 개수", min_value=1, value=20, step=1)
 
-if selected_module is not None:
-    st.caption(f"권장 층수: {selected_module.recommended_floor_range} | 대표 트레일러: {selected_module.representative_trailer}")
-    st.caption(f"권장 크레인군: {selected_module.recommended_crane_group} | 공장 제작률: {selected_module.prefab_rate_text} | 설치 난이도 계수: {selected_module.install_difficulty_coeff:.2f} | 운송 난이도 계수: {selected_module.transport_difficulty_coeff:.2f}")
-    st.caption(f"대개구부: {bool_ko(selected_module.large_opening)} | 반복형 적합도: {selected_module.repeatability_score}/5 | 공용공간 적합도: {selected_module.public_space_score}/5")
+prefab_default = round((selected_module.prefab_rate_min + selected_module.prefab_rate_max) / 2, 2) if selected_module is not None else 0.70
+prefab_rate = st.sidebar.slider("공장 제작 비율", min_value=0.30, max_value=0.95, value=float(prefab_default), step=0.05)
+rigging_weight_t = st.sidebar.number_input("인양보조구/슬링 등 추가 하중 (t)", min_value=0.0, value=0.8, step=0.1)
+safety_factor = st.sidebar.number_input("안전계수", min_value=1.00, value=1.15, step=0.05)
+jit_install = st.sidebar.radio("JIT(Just-In-Time) 설치 계획", ["예", "아니오"], horizontal=True) == "예"
 
-if module_input_mode == "자동 추천" and module_ranking:
-    with st.expander("자동 추천 모듈 상위 후보 보기"):
-        ranking_rows = []
-        for item in module_ranking[:5]:
-            m = item["module"]
-            ranking_rows.append({
-                "모듈 타입": m.name,
-                "적합도 점수": item["score"],
-                "예상 모듈 개수": item["estimated_count"],
-                "구조방식": m.structure,
-                "폭(m)": m.width_m,
-                "길이(m)": m.length_m,
-                "높이(m)": m.height_m,
-                "대표 자중(t)": m.weight_t_default,
-            })
-        st.dataframe(pd.DataFrame(ranking_rows), use_container_width=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 비용·공기 가정")
+rc_unit_cost_krw_per_m2 = st.sidebar.number_input("RC 기준 공사비 (원/㎡)", min_value=0.0, value=2400000.0, step=50000.0)
+modular_factory_unit_cost_krw_per_m2 = st.sidebar.number_input("모듈러 공장 제작 공사비 (원/㎡)", min_value=0.0, value=2550000.0, step=50000.0)
+modular_direct_premium_rate = st.sidebar.slider("모듈러 직접공사비 할증률", 0.0, 0.30, 0.08, 0.01)
+small_project_penalty_rate = st.sidebar.slider("소규모 프로젝트 불리율", 0.0, 0.30, 0.05, 0.01)
+transport_cost_per_module_krw = st.sidebar.number_input("모듈 1개당 운송비 (원)", min_value=0.0, value=1200000.0, step=100000.0)
+installation_cost_per_module_krw = st.sidebar.number_input("모듈 1개당 설치비 (원)", min_value=0.0, value=800000.0, step=50000.0)
+permit_cost_per_module_krw = st.sidebar.number_input("모듈 1개당 특수운행/통제 비용 (원)", min_value=0.0, value=200000.0, step=50000.0)
+schedule_reduction_months = st.sidebar.number_input("모듈러 공기 단축 예상 (개월)", min_value=0.0, value=2.5, step=0.5)
+monthly_financing_saving_krw = st.sidebar.number_input("공기단축 1개월당 금융/간접비 절감액 (원)", min_value=0.0, value=25000000.0, step=1000000.0)
+rc_equipment_cost_krw = st.sidebar.number_input("RC 장비/현장 추가비 (원)", min_value=0.0, value=60000000.0, step=1000000.0)
+tower_usage_months = st.sidebar.number_input("타워크레인 사용 개월 수", min_value=0.0, value=3.0, step=0.5)
 
-st.markdown('</div>', unsafe_allow_html=True)
+run_analysis = st.sidebar.button("분석 실행")
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("6) 공사비/공기 입력")
-col1, col2, col3 = st.columns(3)
-with col1:
-    rc_unit_cost_krw_per_m2 = st.number_input("RC 기준 공사비 (원/㎡)", min_value=0.0, value=2400000.0, step=50000.0)
-    modular_factory_unit_cost_krw_per_m2 = st.number_input("모듈러 공장 제작 기준 공사비 (원/㎡)", min_value=0.0, value=2550000.0, step=50000.0)
-    modular_direct_premium_rate = st.slider("모듈러 직접공사비 할증률", 0.0, 0.30, 0.08, 0.01)
-with col2:
-    transport_cost_per_module_krw = st.number_input("모듈 1개당 운송비 (원)", min_value=0.0, value=1200000.0, step=100000.0)
-    installation_cost_per_module_krw = st.number_input("모듈 1개당 설치비 (원)", min_value=0.0, value=800000.0, step=50000.0)
-    permit_cost_per_module_krw = st.number_input("모듈 1개당 특수운행/통제 비용 (원)", min_value=0.0, value=200000.0, step=50000.0)
-with col3:
-    schedule_reduction_months = st.number_input("모듈러 공기 단축 예상 (개월)", min_value=0.0, value=2.5, step=0.5)
-    monthly_financing_saving_krw = st.number_input("공기단축 1개월당 금융/간접비 절감액 (원)", min_value=0.0, value=18000000.0, step=1000000.0)
-    small_project_penalty_rate = st.slider("소규모 사업 규모의 경제 미달 가산율", 0.0, 0.30, 0.06, 0.01)
 
-col4, col5 = st.columns(2)
-with col4:
-    rc_equipment_cost_krw = st.number_input("RC 장비/타설/운반 추가비 (원)", min_value=0.0, value=45000000.0, step=1000000.0)
-with col5:
-    tower_usage_months = st.number_input("타워크레인 사용 개월수(필요 시)", min_value=0.0, value=4.0, step=0.5)
-st.markdown('</div>', unsafe_allow_html=True)
+# ============================================================
+# CALCULATION
+# ============================================================
+transport_height_m = module_height_m + min(t.deck_height_m for t in TRAILER_DB)
+vehicle_specs = select_vehicle_specs(module_length_m, module_width_m, module_height_m, module_weight_t)
+route_eval = evaluate_route_permit(
+    module_width_m=module_width_m,
+    transport_height_m=transport_height_m,
+    total_weight_t=module_weight_t + min(t.vehicle_weight_t for t in TRAILER_DB),
+    min_road_width_m=road_width_m,
+    turn_condition=turn_condition,
+    obstacle_level=obstacle_level,
+    bridge_tunnel_height_limit_m=bridge_tunnel_height_limit_m,
+    managed_road_42m=(managed_road_42m == "예"),
+    illegal_parking_constant=illegal_parking_constant,
+)
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("7) 운영 전략")
-jit_install = st.radio("JIT(Just-In-Time) 설치 필요 여부", ["예", "아니오"], horizontal=True)
-st.markdown('</div>', unsafe_allow_html=True)
+transport_coeff = selected_module.transport_difficulty_coeff if selected_module else 1.15
+install_coeff = selected_module.install_difficulty_coeff if selected_module else 1.15
+transport_score, transport_reasons = transport_risk_score(
+    module_width_m=module_width_m,
+    transport_height_m=transport_height_m,
+    module_weight_t=module_weight_t,
+    module_length_m=module_length_m,
+    turn_condition=turn_condition,
+    obstacle_level=obstacle_level,
+    pavement_level=pavement_level,
+    module_form=module_form,
+    transport_difficulty_coeff=transport_coeff,
+)
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("8) 분석 실행")
-run_clicked = st.button("STEP 1 전체 분석 실행")
-st.markdown('</div>', unsafe_allow_html=True)
+needed_lifting_t = (module_weight_t + rigging_weight_t) * safety_factor
+required_radius_m = max(building_width_m / 2 + crane_candidate_offset_m, crane_candidate_offset_m + 3)
+required_hook_height_m = top_install_height_m + max(2.0, obstacle_height_m * 0.1 + 2.0)
+install_score, install_reasons = installation_risk_score(
+    module_length_m=module_length_m,
+    module_weight_t=module_weight_t,
+    floors=int(floors),
+    required_radius_m=required_radius_m,
+    staging_area_m2=staging_area_m2,
+    jit_install=jit_install,
+    module_form=module_form,
+    install_difficulty_coeff=install_coeff,
+)
 
-if run_clicked:
-    vehicle_specs = select_vehicle_specs(module_length_m, module_width_m, module_height_m, module_weight_t)
-    representative_transport_height = min([row["운송 높이(m)"] for row in vehicle_specs]) if vehicle_specs else module_height_m
-    representative_total_weight_t = min([row["총중량 추정(t)"] for row in vehicle_specs]) if vehicle_specs else module_weight_t
+crane_results = evaluate_cranes(
+    needed_lifting_t=needed_lifting_t,
+    required_radius_m=required_radius_m,
+    required_hook_height_m=required_hook_height_m,
+    site_frontage_m=site_frontage_m,
+    available_staging_m2=staging_area_m2,
+)
+feasible_cranes = [row for row in crane_results if row["최종판정"] == "가능"]
+best_lifting_margin = feasible_cranes[0]["여유율"] if feasible_cranes else 0.0
 
-    transport_difficulty_coeff = selected_module.transport_difficulty_coeff if selected_module is not None else 1.20
-    install_difficulty_coeff = selected_module.install_difficulty_coeff if selected_module is not None else 1.20
+structure_name, structure_reasons = recommend_structure(
+    building_use=building_use,
+    repeatability_score=repeatability_score,
+    open_plan_need=open_plan_need,
+    public_space_ratio=public_space_ratio,
+    selected_module_name=module_name,
+)
 
-    route_eval = evaluate_route_permit(
-        module_width_m=module_width_m,
-        transport_height_m=representative_transport_height,
-        total_weight_t=representative_total_weight_t,
-        min_road_width_m=road_width_m,
-        turn_condition=turn_condition,
-        obstacle_level=obstacle_level,
-        bridge_tunnel_height_limit_m=bridge_tunnel_height_limit_m,
-        managed_road_42m=(managed_road_42m == "예"),
-        illegal_parking_constant=illegal_parking_constant,
+crane_cost_krw = 0
+selected_crane_name = "적합 장비 없음"
+if feasible_cranes:
+    top_crane = feasible_cranes[0]
+    selected_crane_name = top_crane["장비"]
+    if top_crane["장비군"] == "타워크레인":
+        crane_cost_krw = top_crane["월임대료"] * tower_usage_months + top_crane["설치해체비"]
+    elif top_crane["시간당손료"] > 0:
+        assumed_hours_per_module = 1.5
+        crane_cost_krw = top_crane["시간당손료"] * assumed_hours_per_module * float(module_count)
+
+model_cost = cost_model(
+    gross_area_m2=gross_area_m2,
+    rc_unit_cost_krw_per_m2=rc_unit_cost_krw_per_m2,
+    modular_factory_unit_cost_krw_per_m2=modular_factory_unit_cost_krw_per_m2,
+    module_count=int(module_count),
+    transport_cost_per_module_krw=transport_cost_per_module_krw,
+    installation_cost_per_module_krw=installation_cost_per_module_krw,
+    permit_cost_per_module_krw=permit_cost_per_module_krw,
+    prefab_rate=prefab_rate,
+    schedule_reduction_months=schedule_reduction_months,
+    monthly_financing_saving_krw=monthly_financing_saving_krw,
+    small_project_penalty_rate=small_project_penalty_rate,
+    modular_direct_premium_rate=modular_direct_premium_rate,
+    crane_cost_krw=crane_cost_krw,
+    rc_equipment_cost_krw=rc_equipment_cost_krw,
+)
+
+final_method, final_reasons = recommend_method(
+    transport_feasible=(route_eval["route_status"] in ["가능", "조건부 가능"]),
+    best_lifting_margin=best_lifting_margin,
+    transport_risk_score_value=transport_score,
+    installation_risk_score_value=install_score,
+    modular_cost_total=model_cost["modular_total"],
+    rc_cost_total=model_cost["rc_total"],
+    road_width_m=road_width_m,
+    repeatability_score=repeatability_score,
+    floors=int(floors),
+)
+
+
+# ============================================================
+# MAIN SCREEN
+# ============================================================
+st.markdown(
+    f"""
+    <div class="hero">
+        <div class="hero-tag">OSC 사업성 분석 · 민간사업자 관점 · 부지맞춤형 의사결정 앱</div>
+        <div class="hero-title">수익성극대화를위한부지맞춤형신축매입임대사업모델제안<br>: 민간사업자관점의 OSC 공법 적용 임계점 도출</div>
+        <div class="hero-sub">
+            부지 접근성, 운송 가능성, 양중 여유율, 구조방식, 공장제작률, 공기단축 효과를 종합 반영하여
+            RC 대비 OSC/모듈러 적용의 실현 가능성과 비용 우위를 시각적으로 판단하는 대시보드입니다.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    metric_box("사업명", project_name if project_name else "미입력", "현재 분석 대상 프로젝트")
+with c2:
+    metric_box("건물 용도", building_use, f"연면적 {gross_area_m2:,.0f}㎡ · {int(floors)}층")
+with c3:
+    metric_box("선정 모듈", module_name, f"예상 모듈 수 {int(module_count)}개")
+with c4:
+    metric_box("추천 구조방식", structure_name, f"추천 장비 {selected_crane_name}")
+
+st.markdown("<div class='small-note'>왼쪽 입력 패널의 값을 바꾸면 현재 화면 전체가 즉시 업데이트됩니다. 이후에도 같은 방식으로 계속 코드를 추가·수정하면서 단계적으로 고도화할 수 있습니다.</div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# RESULT HERO
+# ============================================================
+st.markdown(
+    f"""
+    <div class="result-hero">
+        <div class="result-title">최종 1차 판단</div>
+        <div class="result-value">{final_method}</div>
+        <div style="margin-top:0.5rem; font-size:14px; color:#5b6b82; line-height:1.65;">
+            {' · '.join(final_reasons) if final_reasons else '입력 조건을 기준으로 종합 판정'}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+k1, k2, k3, k4, k5 = st.columns(5)
+with k1:
+    metric_box("경로 허가 판정", route_eval["route_status"], "운송 경로 법적/물리적 가능성")
+with k2:
+    metric_box("운송 리스크", f"{transport_score}점", transport_risk_bucket(transport_score))
+with k3:
+    metric_box("설치 리스크", f"{install_score}점", transport_risk_bucket(install_score))
+with k4:
+    metric_box("최고 양중 여유율", f"{best_lifting_margin:.2f}", risk_level_from_margin(best_lifting_margin))
+with k5:
+    diff_text = format_krw(abs(model_cost['difference']))
+    note = "모듈러가 더 비쌈" if model_cost["difference"] > 0 else "모듈러가 더 저렴"
+    metric_box("RC 대비 비용 차이", diff_text, note)
+
+
+# ============================================================
+# TABS
+# ============================================================
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["개요", "부지·운송", "모듈·양중", "비용 비교", "DB/후보"])
+
+with tab1:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📌 프로젝트 요약</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-desc'>현재 입력된 조건을 요약해 첫 화면에서 프로젝트 개요를 빠르게 파악할 수 있도록 구성했습니다.</div>", unsafe_allow_html=True)
+
+    g1, g2 = st.columns([1.1, 1])
+    with g1:
+        summary_df = pd.DataFrame(
+            {
+                "항목": [
+                    "사업명", "건물 용도", "부지 주소", "연면적", "층수", "도로폭", "적치 가능 면적",
+                    "선정 모듈", "모듈 길이", "모듈 폭", "모듈 높이", "모듈 자중", "총 모듈 개수",
+                    "공장 제작 비율", "추천 구조방식", "추천 장비"
+                ],
+                "값": [
+                    project_name if project_name else "미입력", building_use, site_address if site_address else "미입력",
+                    f"{gross_area_m2:,.0f}㎡", f"{int(floors)}층", f"{road_width_m:.1f}m", f"{staging_area_m2:,.0f}㎡",
+                    module_name, f"{module_length_m:.2f}m", f"{module_width_m:.2f}m", f"{module_height_m:.2f}m",
+                    f"{module_weight_t:.2f}t", f"{int(module_count)}개", f"{int(prefab_rate*100)}%",
+                    structure_name, selected_crane_name
+                ]
+            }
+        )
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+    with g2:
+        if site_address.strip():
+            render_simple_map(site_address.strip())
+        else:
+            st.info("왼쪽 패널에 부지 주소를 넣으면 지도가 표시됩니다.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab2:
+    c_left, c_right = st.columns([1, 1])
+    with c_left:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>🚚 운송 경로 판정</div>", unsafe_allow_html=True)
+        st.markdown(route_eval["route_status"] and grade_badge(route_eval["route_status"]), unsafe_allow_html=True)
+        st.write(f"- 법정 운송 높이 한계: **{route_eval['legal_height_limit_m']:.1f}m**")
+        st.write(f"- 실제 운송 높이 추정: **{transport_height_m:.2f}m**")
+        st.write(f"- 전면 도로폭: **{road_width_m:.1f}m**")
+        st.write(f"- 회전 조건: **{turn_condition}**")
+        st.write(f"- 장애물 수준: **{obstacle_level}**")
+        st.write(f"- 상시 불법주정차 영향: **{illegal_parking_constant}**")
+        st.markdown("#### 세부 근거")
+        for reason in route_eval["reasons"]:
+            st.write(f"- {reason}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c_right:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>⚠️ 운송 리스크 세부</div>", unsafe_allow_html=True)
+        st.markdown(grade_badge(transport_risk_bucket(transport_score)), unsafe_allow_html=True)
+        st.write(f"- 종합 점수: **{transport_score}점**")
+        for reason in transport_reasons:
+            st.write(f"- {reason}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🚛 운송 차량 제원 비교</div>", unsafe_allow_html=True)
+    st.dataframe(pd.DataFrame(vehicle_specs), use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab3:
+    upper1, upper2 = st.columns([1, 1])
+    with upper1:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>🏗️ 양중 검토</div>", unsafe_allow_html=True)
+        st.write(f"- 필요 양중하중 = (모듈 자중 **{module_weight_t:.2f}t** + 인양보조구 **{rigging_weight_t:.2f}t**) × 안전계수 **{safety_factor:.2f}**")
+        st.write(f"- 계산 결과 필요 양중하중: **{needed_lifting_t:.2f}t**")
+        st.write(f"- 필요 작업반경: **{required_radius_m:.2f}m**")
+        st.write(f"- 필요 Hook 높이: **{required_hook_height_m:.2f}m**")
+        st.write(f"- 추천 구조방식: **{structure_name}**")
+        st.write(f"- 선정 장비: **{selected_crane_name}**")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with upper2:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>🧩 구조방식 추천 근거</div>", unsafe_allow_html=True)
+        for reason in structure_reasons:
+            st.write(f"- {reason}")
+        st.markdown("#### 설치 리스크")
+        st.markdown(grade_badge(transport_risk_bucket(install_score)), unsafe_allow_html=True)
+        st.write(f"- 종합 점수: **{install_score}점**")
+        for reason in install_reasons:
+            st.write(f"- {reason}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>🏗️ 크레인 후보 비교</div>", unsafe_allow_html=True)
+    crane_df = pd.DataFrame(crane_results)
+    st.dataframe(crane_df, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab4:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>💰 RC vs OSC 비용 비교</div>", unsafe_allow_html=True)
+    x1, x2, x3, x4 = st.columns(4)
+    with x1:
+        metric_box("RC 총비용", format_krw(model_cost["rc_total"]), "기준 공법")
+    with x2:
+        metric_box("OSC 총비용", format_krw(model_cost["modular_total"]), "공장제작+물류+양중 반영")
+    with x3:
+        metric_box("물류/설치 합계", format_krw(model_cost["logistics_total"]), "운송+설치+통제비")
+    with x4:
+        metric_box("공기단축 절감효과", format_krw(model_cost["schedule_saving_total"]), "금융/간접비 절감")
+
+    compare_df = bar_compare_df(model_cost["rc_total"], model_cost["modular_total"]).set_index("공법")
+    st.bar_chart(compare_df)
+
+    breakdown_df = pd.DataFrame(
+        {
+            "항목": [
+                "RC 총비용", "OSC 총비용", "비용 차이(OSC-RC)", "조정 후 모듈러 단가(원/㎡)",
+                "크레인 비용", "RC 장비 추가비", "물류/설치 합계", "공기단축 절감효과"
+            ],
+            "값": [
+                format_krw(model_cost["rc_total"]),
+                format_krw(model_cost["modular_total"]),
+                format_krw(model_cost["difference"]),
+                format_krw(model_cost["adjusted_modular_unit"]),
+                format_krw(crane_cost_krw),
+                format_krw(rc_equipment_cost_krw),
+                format_krw(model_cost["logistics_total"]),
+                format_krw(model_cost["schedule_saving_total"]),
+            ],
+        }
     )
+    st.dataframe(breakdown_df, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    transport_score, transport_reasons = transport_risk_score(
-        module_width_m=module_width_m,
-        transport_height_m=representative_transport_height,
-        module_weight_t=module_weight_t,
-        module_length_m=module_length_m,
-        turn_condition=turn_condition,
-        obstacle_level=obstacle_level,
-        pavement_level=pavement_level,
-        module_form=module_form,
-        transport_difficulty_coeff=transport_difficulty_coeff,
-    )
-    if illegal_parking_constant == "중간":
-        transport_score += 1
-        transport_reasons.append("상시 불법주정차 중간 영향 +1점")
-    elif illegal_parking_constant == "높음":
-        transport_score += 2
-        transport_reasons.append("상시 불법주정차 높음 영향 +2점")
-
-    needed_lifting_t = (module_weight_t + rigging_weight_t) * safety_factor
-    required_radius_m = crane_candidate_offset_m + max(building_width_m, building_length_m) / 2.0
-    required_hook_height_m = top_install_height_m + obstacle_height_m + 3.0
-
-    crane_results = evaluate_cranes(
-        needed_lifting_t=needed_lifting_t,
-        required_radius_m=required_radius_m,
-        required_hook_height_m=required_hook_height_m,
-        site_frontage_m=site_frontage_m,
-        available_staging_m2=staging_area_m2,
-    )
-    feasible_cranes = [row for row in crane_results if row["최종판정"] == "가능"]
-    best_lifting_margin = max([row["여유율"] for row in feasible_cranes], default=0.0)
-
-    install_score, install_reasons = installation_risk_score(
-        module_length_m=module_length_m,
-        module_weight_t=module_weight_t,
-        floors=int(floors),
-        required_radius_m=required_radius_m,
-        staging_area_m2=staging_area_m2,
-        jit_install=(jit_install == "예"),
-        module_form=module_form,
-        install_difficulty_coeff=install_difficulty_coeff,
-    )
-
-    recommended_structure, structure_reasons = recommend_structure(
-        building_use=building_use,
-        repeatability_score=repeatability_score,
-        open_plan_need=open_plan_need,
-        public_space_ratio=public_space_ratio,
-        selected_module_name=module_name,
-    )
-
-    preferred_crane_type = recommend_crane_type(
-        module_weight_t=module_weight_t,
-        floors=int(floors),
-        required_radius_m=required_radius_m,
-        road_side_short_term=(road_side_short_term == "예"),
-        available_staging_m2=staging_area_m2,
-        module_name=module_name,
-    )
-
-    crane_cost_krw = 0.0
-    top_crane = None
-    if feasible_cranes:
-        top_crane = feasible_cranes[0]
-        if top_crane["장비군"] == "타워크레인":
-            crane_cost_krw = top_crane["월임대료"] * tower_usage_months + top_crane["설치해체비"]
-        elif top_crane["시간당손료"] > 0:
-            assumed_hours_per_module = 1.5
-            crane_cost_krw = top_crane["시간당손료"] * assumed_hours_per_module * module_count
-
-    model_cost = cost_model(
-        gross_area_m2=gross_area_m2,
-        rc_unit_cost_krw_per_m2=rc_unit_cost_krw_per_m2,
-        modular_factory_unit_cost_krw_per_m2=modular_factory_unit_cost_krw_per_m2,
-        module_count=int(module_count),
-        transport_cost_per_module_krw=transport_cost_per_module_krw,
-        installation_cost_per_module_krw=installation_cost_per_module_krw,
-        permit_cost_per_module_krw=permit_cost_per_module_krw,
-        prefab_rate=prefab_rate,
-        schedule_reduction_months=schedule_reduction_months,
-        monthly_financing_saving_krw=monthly_financing_saving_krw,
-        small_project_penalty_rate=small_project_penalty_rate,
-        modular_direct_premium_rate=modular_direct_premium_rate,
-        crane_cost_krw=crane_cost_krw,
-        rc_equipment_cost_krw=rc_equipment_cost_krw,
-    )
-
-    final_method, final_reasons = recommend_method(
-        transport_feasible=(route_eval["route_status"] in ["가능", "조건부 가능"]),
-        best_lifting_margin=best_lifting_margin,
-        transport_risk_score_value=transport_score,
-        installation_risk_score_value=install_score,
-        modular_cost_total=model_cost["modular_total"],
-        rc_cost_total=model_cost["rc_total"],
-        road_width_m=road_width_m,
-        repeatability_score=repeatability_score,
-        floors=int(floors),
-    )
-
-    st.subheader("분석 결과")
-
-    k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown('<div class="kpi"><div class="kpi-title">최종 판단</div><div class="kpi-value">' + final_method + '</div></div>', unsafe_allow_html=True)
-    with k2:
-        st.markdown('<div class="kpi"><div class="kpi-title">경로 허가 판정</div><div class="kpi-value">' + route_eval["route_status"] + '</div></div>', unsafe_allow_html=True)
-    with k3:
-        st.markdown('<div class="kpi"><div class="kpi-title">운송 리스크</div><div class="kpi-value">' + f'{transport_score}점 ({transport_risk_bucket(transport_score)})' + '</div></div>', unsafe_allow_html=True)
-    with k4:
-        st.markdown('<div class="kpi"><div class="kpi-title">최고 양중 여유율</div><div class="kpi-value">' + (f'{best_lifting_margin:.2f}' if best_lifting_margin else '0.00') + '</div></div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### A. 핵심 판정")
-    st.write(f"- 선택 모듈: **{module_name}**")
-    st.write(f"- 총 모듈 개수: **{int(module_count)}개**")
-    st.write(f"- 추천 구조방식: **{recommended_structure}**")
-    st.write(f"- 추천 장비 전략: **{preferred_crane_type}**")
-    if top_crane:
-        st.write(f"- 1순위 가능 장비: **{top_crane['장비']}** (여유율 {top_crane['여유율']}, 판정 {top_crane['여유율판정']})")
-    else:
-        st.write("- 가능 장비 후보가 없어 양중 성립성이 부족합니다.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### B. 최종 판단 근거")
-    for reason in final_reasons:
-        st.write(f"- {reason}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### C. 비용 비교")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("RC 총비용", format_krw(model_cost["rc_total"]))
-    with c2:
-        st.metric("모듈러 총비용", format_krw(model_cost["modular_total"]))
-    with c3:
-        st.metric("모듈러 - RC", format_krw(model_cost["difference"]))
-
-    st.write(f"- 조정 후 모듈러 단가: **{format_krw(model_cost['adjusted_modular_unit'])}/㎡**")
-    st.write(f"- 모듈 운송·설치·허가 합계: **{format_krw(model_cost['logistics_total'])}**")
-    st.write(f"- 공기단축 절감 반영액: **{format_krw(model_cost['schedule_saving_total'])}**")
-    st.write(f"- 반영된 공장 제작 비율: **{prefab_rate:.0%}**")
-    st.write(f"- 소규모 사업 규모의 경제 미달 가산율: **{small_project_penalty_rate:.0%}**")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### D. 경로 허가 판정")
-    st.write(f"- 경로 판정: **{route_eval['route_status']}**")
-    st.write(f"- 특수허가 필요 여부: **{bool_ko(route_eval['permit_needed'])}**")
-    st.write(f"- 적용 높이 기준: **{route_eval['legal_height_limit_m']:.1f}m**")
-    for reason in route_eval["reasons"]:
-        st.write(f"- {reason}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### E. 양중 검토")
-    st.write(f"- 필요 양중하중 = (모듈 자중 {module_weight_t:.2f}t + 인양보조구 {rigging_weight_t:.2f}t) × 안전계수 {safety_factor:.2f}")
-    st.write(f"- 계산 결과 필요 양중하중: **{needed_lifting_t:.2f}t**")
-    st.write(f"- 필요 작업반경: **{required_radius_m:.2f}m**")
-    st.write(f"- 필요 Hook 높이: **{required_hook_height_m:.2f}m**")
-    st.dataframe(pd.DataFrame(crane_results), use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### F. 구조방식 추천 근거")
-    for reason in structure_reasons:
-        st.write(f"- {reason}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### G. 운송 리스크 세부")
-    for reason in transport_reasons:
-        st.write(f"- {reason}")
-    st.write(f"- 종합 판정: **{transport_risk_bucket(transport_score)}**")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### H. 설치 리스크 세부")
-    for reason in install_reasons:
-        st.write(f"- {reason}")
-    st.write(f"- 종합 판정: **{transport_risk_bucket(install_score)}**")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="result-card">', unsafe_allow_html=True)
-    st.markdown("### I. 운송 차량 제원 비교")
-    st.caption("운송 계획 수립 참고용 제원 비교입니다.")
-    st.dataframe(pd.DataFrame(vehicle_specs), use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+with tab5:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📚 참고용 모듈 DB</div>", unsafe_allow_html=True)
+    st.dataframe(module_db_dataframe(), use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if module_input_mode == "자동 추천" and module_ranking:
-        st.markdown('<div class="result-card">', unsafe_allow_html=True)
-        st.markdown("### J. 자동 추천 모듈 후보 비교")
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>🤖 자동 추천 모듈 상위 후보</div>", unsafe_allow_html=True)
         detail_rows = []
         for item in module_ranking[:5]:
             m = item["module"]
-            detail_rows.append({
-                "모듈 타입": m.name,
-                "적합도 점수": item["score"],
-                "예상 개수": item["estimated_count"],
-                "구조방식": m.structure,
-                "권장 층수": m.recommended_floor_range,
-                "권장 크레인군": m.recommended_crane_group,
-                "운송 난이도 계수": m.transport_difficulty_coeff,
-                "설치 난이도 계수": m.install_difficulty_coeff,
-            })
-        st.dataframe(pd.DataFrame(detail_rows), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            detail_rows.append(
+                {
+                    "모듈 타입": m.name,
+                    "적합도 점수": item["score"],
+                    "예상 개수": item["estimated_count"],
+                    "구조방식": m.structure,
+                    "권장 층수": m.recommended_floor_range,
+                    "권장 크레인군": m.recommended_crane_group,
+                    "운송 난이도 계수": m.transport_difficulty_coeff,
+                    "설치 난이도 계수": m.install_difficulty_coeff,
+                }
+            )
+        st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("참고용 모듈 DB")
-st.dataframe(module_db_dataframe(), use_container_width=True)
-st.markdown('</div>', unsafe_allow_html=True)
+
+# ============================================================
+# FOOTER
+# ============================================================
+st.markdown(
+    """
+    <div class="small-note" style="margin-top:1rem; padding-bottom:1rem;">
+        본 앱은 STEP 1 의사결정용 비교 도구입니다. 이후 단계에서 모듈·장비 DB 고도화, 사례 DB 연결,
+        민간사업자 수익률 산정, 임계점 자동 탐색, 보고서 자동 출력 기능까지 계속 확장할 수 있습니다.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
