@@ -114,10 +114,31 @@ class ModuleType:
     weight_t_max: float
     openness: str
     desc: str
+    width_range_text: str
+    length_range_text: str
+    height_range_text: str
+    weight_range_text: str
+    recommended_floor_range: str
+    recommended_joint: str
+    representative_trailer: str
+    recommended_crane_group: str
+    prefab_rate_min: float
+    prefab_rate_max: float
+    install_difficulty_coeff: float
+    transport_difficulty_coeff: float
+    large_opening: bool
+    repeatability_score: int
+    public_space_score: int
+    note_text: str
 
     @property
     def weight_t_default(self) -> float:
         return round((self.weight_t_min + self.weight_t_max) / 2.0, 2)
+
+    @property
+    def prefab_rate_text(self) -> str:
+        return f"{int(round(self.prefab_rate_min * 100))}~{int(round(self.prefab_rate_max * 100))}%"
+
 
 
 @dataclass
@@ -156,40 +177,185 @@ MODULE_DB: Dict[str, ModuleType] = {
         weight_t_min=8.0,
         weight_t_max=10.0,
         openness="corner-supported",
-        desc="소형 임대주택, 반복형 원룸/소형 세대, 운송/설치 리스크 낮음",
+        desc="소형 반복형 세대에 적합하고 운송·설치 리스크가 낮은 기본형 모듈",
+        width_range_text="2.7~3.2 m",
+        length_range_text="6.0~8.5 m",
+        height_range_text="3.0~3.3 m",
+        weight_range_text="6~10 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="볼트",
+        representative_trailer="2축/3축 저상 트레일러",
+        recommended_crane_group="트럭크레인, 중소형 타워크레인",
+        prefab_rate_min=0.7,
+        prefab_rate_max=0.9,
+        install_difficulty_coeff=1.0,
+        transport_difficulty_coeff=1.0,
+        large_opening=false,
+        repeatability_score=5,
+        public_space_score=2,
+        note_text="반복형 평면에 가장 유리하고 경제성이 높은 대표 유형",
     ),
     "Corner-supported standard module": ModuleType(
         name="Corner-supported standard module",
-        structure="Corner-supported",
+        structure="코너지지 표준형",
         width_m=3.2,
         length_m=10.0,
         height_m=3.4,
         weight_t_min=10.0,
         weight_t_max=14.0,
         openness="corner-supported",
-        desc="일반 주거, 적층형 표준 모듈러, 범용형",
+        desc="표준 주거 세대 대응이 쉬운 범용형 모듈",
+        width_range_text="3.0~3.5 m",
+        length_range_text="8.0~10.5 m",
+        height_range_text="3.1~3.5 m",
+        weight_range_text="10~15 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="볼트 + 플레이트",
+        representative_trailer="3축 저상 트레일러",
+        recommended_crane_group="트럭크레인, 타워크레인",
+        prefab_rate_min=0.6,
+        prefab_rate_max=0.85,
+        install_difficulty_coeff=1.2,
+        transport_difficulty_coeff=1.15,
+        large_opening=false,
+        repeatability_score=4,
+        public_space_score=3,
+        note_text="주거형 프로젝트에서 가장 무난하게 적용 가능한 표준형",
+    ),
+    "Corner-supported stacked module": ModuleType(
+        name="Corner-supported stacked module",
+        structure="코너지지 적층형",
+        width_m=3.3,
+        length_m=10.5,
+        height_m=3.4,
+        weight_t_min=12.0,
+        weight_t_max=18.0,
+        openness="corner-supported",
+        desc="적층 안정성을 우선하는 다층 모듈러 대응형",
+        width_range_text="3.0~3.6 m",
+        length_range_text="8.0~12.0 m",
+        height_range_text="3.2~3.6 m",
+        weight_range_text="12~18 t",
+        recommended_floor_range="중층",
+        recommended_joint="플레이트 + 볼트",
+        representative_trailer="3축 저상 트레일러",
+        recommended_crane_group="타워크레인",
+        prefab_rate_min=0.6,
+        prefab_rate_max=0.8,
+        install_difficulty_coeff=1.25,
+        transport_difficulty_coeff=1.2,
+        large_opening=false,
+        repeatability_score=4,
+        public_space_score=3,
+        note_text="적층 반복이 많은 프로젝트에 유리하고 상층 양중 검토가 중요",
     ),
     "Open-sided module": ModuleType(
         name="Open-sided module",
-        structure="오픈사이드",
+        structure="오픈사이드 / 라멘형",
         width_m=3.5,
         length_m=12.0,
         height_m=3.5,
         weight_t_min=16.0,
         weight_t_max=22.0,
         openness="open-sided",
-        desc="학교, 병원, 공용부, 거실 확장형, 구조/운송 민감도 증가",
+        desc="측면 개방성이 커서 공용공간이나 대공간 조합에 유리한 모듈",
+        width_range_text="3.2~4.0 m",
+        length_range_text="9.0~12.0 m",
+        height_range_text="3.4~3.8 m",
+        weight_range_text="15~22 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="플레이트 + 볼트 + 보강",
+        representative_trailer="3축 저상 또는 특수 트레일러",
+        recommended_crane_group="중대형 타워크레인, 크롤러크레인",
+        prefab_rate_min=0.5,
+        prefab_rate_max=0.7,
+        install_difficulty_coeff=1.5,
+        transport_difficulty_coeff=1.35,
+        large_opening=true,
+        repeatability_score=2,
+        public_space_score=5,
+        note_text="대개구부로 인해 구조 보강과 운송 시 비틀림 관리가 중요",
     ),
     "Open-ended module": ModuleType(
         name="Open-ended module",
-        structure="오픈엔드",
-        width_m=3.5,
-        length_m=12.0,
-        height_m=3.5,
-        weight_t_min=14.0,
-        weight_t_max=18.0,
+        structure="오픈엔드 프레임형",
+        width_m=3.3,
+        length_m=9.0,
+        height_m=3.4,
+        weight_t_min=11.0,
+        weight_t_max=16.0,
         openness="open-ended",
-        desc="선형 연결형 세대, 내부 연속 공간 확보",
+        desc="단부 개방을 통해 세대 또는 복도 방향 연결성을 확보하는 모듈",
+        width_range_text="3.0~3.5 m",
+        length_range_text="8.0~10.0 m",
+        height_range_text="3.2~3.5 m",
+        weight_range_text="11~16 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="볼트 + 플레이트",
+        representative_trailer="3축 저상 트레일러",
+        recommended_crane_group="타워크레인",
+        prefab_rate_min=0.6,
+        prefab_rate_max=0.8,
+        install_difficulty_coeff=1.2,
+        transport_difficulty_coeff=1.2,
+        large_opening=true,
+        repeatability_score=3,
+        public_space_score=3,
+        note_text="내부 연속 공간 확보에 유리하지만 단부 보강 상세가 중요",
+    ),
+    "Corridor-type combined module": ModuleType(
+        name="Corridor-type combined module",
+        structure="내력벽형 또는 코너지지형",
+        width_m=3.0,
+        length_m=8.5,
+        height_m=3.2,
+        weight_t_min=8.0,
+        weight_t_max=12.0,
+        openness="corner-supported",
+        desc="복도형 또는 중복도형 반복 배치에 적합한 세대 조합용 모듈",
+        width_range_text="2.8~3.3 m",
+        length_range_text="7.0~9.0 m",
+        height_range_text="3.0~3.3 m",
+        weight_range_text="8~12 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="볼트",
+        representative_trailer="2축/3축 저상 트레일러",
+        recommended_crane_group="트럭크레인, 타워크레인",
+        prefab_rate_min=0.7,
+        prefab_rate_max=0.9,
+        install_difficulty_coeff=1.1,
+        transport_difficulty_coeff=1.05,
+        large_opening=false,
+        repeatability_score=5,
+        public_space_score=3,
+        note_text="반복 배치 효율이 높고 모듈 수 산정이 비교적 단순한 유형",
+    ),
+    "Large-span institutional module": ModuleType(
+        name="Large-span institutional module",
+        structure="라멘형 / 하이브리드 보강형",
+        width_m=3.6,
+        length_m=12.0,
+        height_m=3.6,
+        weight_t_min=18.0,
+        weight_t_max=25.0,
+        openness="open-sided",
+        desc="대공간 수요가 큰 시설형 프로젝트에 대응하는 고중량 모듈",
+        width_range_text="3.4~4.2 m",
+        length_range_text="10.0~14.0 m",
+        height_range_text="3.4~3.9 m",
+        weight_range_text="18~25 t",
+        recommended_floor_range="저층~중층",
+        recommended_joint="플레이트 + 그라우트 보강",
+        representative_trailer="특수 트레일러 검토",
+        recommended_crane_group="중대형 타워크레인, 크롤러크레인",
+        prefab_rate_min=0.45,
+        prefab_rate_max=0.65,
+        install_difficulty_coeff=1.6,
+        transport_difficulty_coeff=1.45,
+        large_opening=true,
+        repeatability_score=2,
+        public_space_score=5,
+        note_text="중량 증가와 대개구부 특성 때문에 운송·양중 민감도가 높음",
     ),
     "Hybrid / podium + modular upper floors": ModuleType(
         name="Hybrid / podium + modular upper floors",
@@ -200,7 +366,23 @@ MODULE_DB: Dict[str, ModuleType] = {
         weight_t_min=40.0,
         weight_t_max=40.0,
         openness="hybrid",
-        desc="하부 RC/철골 + 상부 모듈러, 도심형 중층 프로젝트 현실 대안",
+        desc="하부 포디움과 상부 모듈러를 결합하는 도심형 하이브리드 대안",
+        width_range_text="3.2~3.5 m",
+        length_range_text="15.0~19.0 m",
+        height_range_text="3.6~4.5 m",
+        weight_range_text="30~40 t",
+        recommended_floor_range="중층 이상",
+        recommended_joint="볼트 + 플레이트 + 그라우트 혼합",
+        representative_trailer="3축 또는 특수 트레일러",
+        recommended_crane_group="타워크레인, 러핑크레인",
+        prefab_rate_min=0.4,
+        prefab_rate_max=0.7,
+        install_difficulty_coeff=1.8,
+        transport_difficulty_coeff=1.6,
+        large_opening=true,
+        repeatability_score=4,
+        public_space_score=4,
+        note_text="하부와 상부 인터페이스 상세가 핵심이며 중량·경로 조건에 민감",
     ),
 }
 
@@ -406,6 +588,34 @@ def format_krw(value: float) -> str:
 def bool_ko(flag: bool) -> str:
     return "예" if flag else "아니오"
 
+
+
+
+def module_db_dataframe() -> pd.DataFrame:
+    rows = []
+    for module in MODULE_DB.values():
+        rows.append(
+            {
+                "모듈 타입": module.name,
+                "구조방식": module.structure,
+                "폭 범위": module.width_range_text,
+                "길이 범위": module.length_range_text,
+                "높이 범위": module.height_range_text,
+                "중량 범위": module.weight_range_text,
+                "권장 층수": module.recommended_floor_range,
+                "권장 접합": module.recommended_joint,
+                "대표 트레일러": module.representative_trailer,
+                "권장 크레인군": module.recommended_crane_group,
+                "공장 제작률": module.prefab_rate_text,
+                "설치 난이도 계수": module.install_difficulty_coeff,
+                "운송 난이도 계수": module.transport_difficulty_coeff,
+                "대개구부": bool_ko(module.large_opening),
+                "반복형 적합도": module.repeatability_score,
+                "공용공간 적합도": module.public_space_score,
+                "특징": module.note_text,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def risk_level_from_margin(margin: float) -> str:
@@ -1049,6 +1259,10 @@ if count_mode == "자동 산정":
 else:
     st.caption(f"총 모듈 개수: {int(module_count)}개")
 st.caption(module_desc)
+if module_mode == "DB 선택":
+    st.caption(f"권장 층수: {selected_module.recommended_floor_range} | 권장 접합: {selected_module.recommended_joint} | 대표 트레일러: {selected_module.representative_trailer}")
+    st.caption(f"권장 크레인군: {selected_module.recommended_crane_group} | 공장 제작률: {selected_module.prefab_rate_text} | 설치 난이도 계수: {selected_module.install_difficulty_coeff:.2f} | 운송 난이도 계수: {selected_module.transport_difficulty_coeff:.2f}")
+    st.caption(f"대개구부: {bool_ko(selected_module.large_opening)} | 반복형 적합도: {selected_module.repeatability_score}/5 | 공용공간 적합도: {selected_module.public_space_score}/5")
 st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -1091,11 +1305,18 @@ jit_install = st.radio("JIT(Just-In-Time) 설치 필요 여부", ["예", "아니
 st.markdown('</div>', unsafe_allow_html=True)
 
 
+
+st.markdown('<div class="block-card">', unsafe_allow_html=True)
+st.subheader("8) 모듈 DB 요약")
+st.dataframe(module_db_dataframe(), use_container_width=True, hide_index=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+
 # =========================================================
 # 분석 실행
 # =========================================================
 st.markdown('<div class="block-card">', unsafe_allow_html=True)
-st.subheader("8) 분석 실행")
+st.subheader("9) 분석 실행")
 run_clicked = st.button("STEP 1 전체 분석 실행")
 st.markdown('</div>', unsafe_allow_html=True)
 
