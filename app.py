@@ -1317,7 +1317,7 @@ if not st.session_state.analysis_ready:
         <div class="hero">
             <div class="hero-title">
                 수익성극대화를위한부지맞춤형신축매입임대사업모델제안<br>
-                : 민간사업자관점의 OSC 공법 적용 임계점 도출
+                : 민간사업자관점의 모듈러 공법 적용 임계점 도출
             </div>
         </div>
         """,
