@@ -14,7 +14,7 @@ from geopy.geocoders import Nominatim
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="도심 노후 부지 모듈러 시공 가능성 분석 도구",
+    page_title="도심 노후 부지 모듈러 3D 시공 가능성 분석 도구",
     page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -41,7 +41,6 @@ st.markdown(
     --text: #111827;
     --muted: #6b7280;
     --primary: #1f3a5f;
-    --primary-soft: #eef3f8;
     --accent: #3b82f6;
     --ok: #166534;
     --warn: #a16207;
@@ -210,35 +209,6 @@ html, body, [data-testid="stAppViewContainer"] {
 # DATA MODELS
 # ============================================================
 @dataclass
-class ModuleType:
-    name: str
-    structure: str
-    width_m: float
-    length_m: float
-    height_m: float
-    weight_t_min: float
-    weight_t_max: float
-    openness: str
-    desc: str
-    recommended_floor_range: str
-    representative_trailer: str
-    recommended_crane_group: str
-    install_difficulty_coeff: float
-    transport_difficulty_coeff: float
-    large_opening: bool
-    repeatability_score: int
-    public_space_score: int
-    floor_min: int
-    floor_max: int
-    open_plan_score: int
-    base_efficiency_ratio: float
-
-    @property
-    def weight_t_default(self) -> float:
-        return round((self.weight_t_min + self.weight_t_max) / 2.0, 2)
-
-
-@dataclass
 class TrailerSpec:
     name: str
     deck_length_m: float
@@ -265,172 +235,29 @@ class CraneSpec:
 
 
 # ============================================================
-# DATABASES
+# FIXED LH STANDARD MODULE
 # ============================================================
-MODULE_DB: Dict[str, ModuleType] = {
-    "Small load-bearing wall module": ModuleType(
-        name="Small load-bearing wall module",
-        structure="내력벽형",
-        width_m=3.0,
-        length_m=8.0,
-        height_m=3.2,
-        weight_t_min=8.0,
-        weight_t_max=10.0,
-        openness="corner-supported",
-        desc="소형 반복형 세대에 적합하고 운송 리스크가 낮은 기본형 모듈",
-        recommended_floor_range="저층~중층",
-        representative_trailer="2축/3축 저상 트레일러",
-        recommended_crane_group="트럭크레인, 중소형 타워크레인",
-        install_difficulty_coeff=1.00,
-        transport_difficulty_coeff=1.00,
-        large_opening=False,
-        repeatability_score=5,
-        public_space_score=2,
-        floor_min=1,
-        floor_max=8,
-        open_plan_score=1,
-        base_efficiency_ratio=0.88,
-    ),
-    "Corner-supported standard module": ModuleType(
-        name="Corner-supported standard module",
-        structure="코너지지 표준형",
-        width_m=3.2,
-        length_m=10.0,
-        height_m=3.4,
-        weight_t_min=10.0,
-        weight_t_max=14.0,
-        openness="corner-supported",
-        desc="표준 주거 세대 대응이 쉬운 범용형 모듈",
-        recommended_floor_range="저층~중층",
-        representative_trailer="3축 저상 트레일러",
-        recommended_crane_group="트럭크레인, 타워크레인",
-        install_difficulty_coeff=1.20,
-        transport_difficulty_coeff=1.15,
-        large_opening=False,
-        repeatability_score=4,
-        public_space_score=3,
-        floor_min=1,
-        floor_max=12,
-        open_plan_score=2,
-        base_efficiency_ratio=0.82,
-    ),
-    "Corner-supported stacked module": ModuleType(
-        name="Corner-supported stacked module",
-        structure="코너지지 적층형",
-        width_m=3.3,
-        length_m=10.5,
-        height_m=3.4,
-        weight_t_min=12.0,
-        weight_t_max=18.0,
-        openness="corner-supported",
-        desc="적층 안정성을 우선하는 다층 대응형 모듈",
-        recommended_floor_range="중층",
-        representative_trailer="3축 저상 트레일러",
-        recommended_crane_group="타워크레인",
-        install_difficulty_coeff=1.25,
-        transport_difficulty_coeff=1.20,
-        large_opening=False,
-        repeatability_score=4,
-        public_space_score=3,
-        floor_min=4,
-        floor_max=15,
-        open_plan_score=2,
-        base_efficiency_ratio=0.80,
-    ),
-    "Open-sided module": ModuleType(
-        name="Open-sided module",
-        structure="오픈사이드 / 라멘형",
-        width_m=3.5,
-        length_m=12.0,
-        height_m=3.5,
-        weight_t_min=16.0,
-        weight_t_max=22.0,
-        openness="open-sided",
-        desc="측면 개방성이 커서 공용공간과 대공간에 유리한 모듈",
-        recommended_floor_range="저층~중층",
-        representative_trailer="3축 저상 또는 특수 트레일러",
-        recommended_crane_group="중대형 타워크레인, 크롤러크레인",
-        install_difficulty_coeff=1.50,
-        transport_difficulty_coeff=1.35,
-        large_opening=True,
-        repeatability_score=2,
-        public_space_score=5,
-        floor_min=1,
-        floor_max=10,
-        open_plan_score=5,
-        base_efficiency_ratio=0.68,
-    ),
-    "Open-ended module": ModuleType(
-        name="Open-ended module",
-        structure="오픈엔드 프레임형",
-        width_m=3.3,
-        length_m=9.0,
-        height_m=3.4,
-        weight_t_min=11.0,
-        weight_t_max=16.0,
-        openness="open-ended",
-        desc="단부 개방을 통한 세대 연결에 유리한 모듈",
-        recommended_floor_range="저층~중층",
-        representative_trailer="3축 저상 트레일러",
-        recommended_crane_group="타워크레인",
-        install_difficulty_coeff=1.20,
-        transport_difficulty_coeff=1.20,
-        large_opening=True,
-        repeatability_score=3,
-        public_space_score=3,
-        floor_min=1,
-        floor_max=10,
-        open_plan_score=3,
-        base_efficiency_ratio=0.76,
-    ),
-    "Corridor-type combined module": ModuleType(
-        name="Corridor-type combined module",
-        structure="복도형 조합",
-        width_m=3.0,
-        length_m=8.5,
-        height_m=3.2,
-        weight_t_min=8.0,
-        weight_t_max=12.0,
-        openness="corner-supported",
-        desc="복도형 반복 배치에 적합한 주거형 모듈",
-        recommended_floor_range="저층~중층",
-        representative_trailer="2축/3축 저상 트레일러",
-        recommended_crane_group="트럭크레인, 타워크레인",
-        install_difficulty_coeff=1.10,
-        transport_difficulty_coeff=1.05,
-        large_opening=False,
-        repeatability_score=5,
-        public_space_score=3,
-        floor_min=1,
-        floor_max=12,
-        open_plan_score=1,
-        base_efficiency_ratio=0.86,
-    ),
-    "Hybrid / podium + modular upper floors": ModuleType(
-        name="Hybrid / podium + modular upper floors",
-        structure="하부 RC + 상부 모듈러",
-        width_m=3.35,
-        length_m=11.0,
-        height_m=3.5,
-        weight_t_min=13.0,
-        weight_t_max=19.0,
-        openness="hybrid",
-        desc="하부 RC 포디움 위에 상부 모듈러를 올리는 하이브리드형",
-        recommended_floor_range="중층 이상",
-        representative_trailer="3축 저상 또는 특수 트레일러",
-        recommended_crane_group="타워크레인, 러핑크레인",
-        install_difficulty_coeff=1.40,
-        transport_difficulty_coeff=1.25,
-        large_opening=True,
-        repeatability_score=4,
-        public_space_score=4,
-        floor_min=4,
-        floor_max=20,
-        open_plan_score=4,
-        base_efficiency_ratio=0.78,
-    ),
+# 필요하면 여기 숫자만 바꾸면 됨.
+LH_STANDARD_MODULE = {
+    "name": "LH 표준형 모듈",
+    "structure": "코너지지 표준형",
+    "width_m": 3.2,
+    "length_m": 10.0,
+    "height_m": 3.2,
+    "weight_t": 12.0,
+    "base_efficiency_ratio": 0.82,
+    "transport_difficulty_coeff": 1.15,
+    "install_difficulty_coeff": 1.15,
+    "floor_min": 1,
+    "floor_max": 12,
+    "module_form": "corner-supported",
+    "desc": "LH 표준형 단일 모듈 가정",
 }
 
+
+# ============================================================
+# DATABASES
+# ============================================================
 TRAILER_DB: List[TrailerSpec] = [
     TrailerSpec("2축 저상 트레일러 A", 12.0, 2.44, 0.90, 5.05, 22.0, "일반", 6.0),
     TrailerSpec("2축 저상 트레일러 B", 13.3, 2.75, 0.50, 7.51, 23.0, "일반", 6.5),
@@ -513,9 +340,9 @@ def estimate_module_count(gross_area_m2: float, module_length_m: float, module_w
 
 
 def estimate_modules_per_floor(building_length_m: float, building_width_m: float, module_length_m: float, module_width_m: float) -> int:
-    count_x = max(1, int(building_length_m // module_length_m))
-    count_y = max(1, int(building_width_m // module_width_m))
-    return count_x * count_y
+    count_x = max(1, int(building_width_m // module_width_m))
+    count_y = max(1, int(building_length_m // module_length_m))
+    return max(1, count_x * count_y)
 
 
 def compute_required_radius(site_depth_m: float, front_setback_m: float, crane_offset_m: float, building_width_m: float) -> float:
@@ -544,54 +371,6 @@ def installation_risk_bucket(score: int) -> str:
     return "위험"
 
 
-def auto_select_module(
-    building_use: str,
-    floors: int,
-    repeatability_score: int,
-    public_space_ratio: int,
-    open_plan_need: int,
-    road_width_m: float,
-    staging_area_m2: float,
-) -> Tuple[ModuleType, List[Dict[str, object]]]:
-    rows = []
-    for module in MODULE_DB.values():
-        score = 0.0
-        reasons: List[str] = []
-
-        score += (5 - abs(module.repeatability_score - repeatability_score)) * 3.0
-        score += (5 - abs(module.public_space_score - public_space_ratio)) * 2.0
-        score += (5 - abs(module.open_plan_score - open_plan_need)) * 2.0
-
-        if module.floor_min <= floors <= module.floor_max:
-            score += 8.0
-            reasons.append("권장 층수 범위 적합")
-        else:
-            score -= 5.0
-            reasons.append("권장 층수 범위 이탈")
-
-        if building_use in ["공동주택", "기숙사"] and module.repeatability_score >= 4:
-            score += 4.0
-            reasons.append("주거 반복형에 유리")
-        if building_use in ["학교", "병원", "업무시설"] and module.public_space_score >= 4:
-            score += 4.0
-            reasons.append("공용공간 요구에 유리")
-        if building_use == "복합용도" and module.openness == "hybrid":
-            score += 5.0
-            reasons.append("복합용도에 하이브리드 적합")
-
-        if road_width_m < 6.0 and module.transport_difficulty_coeff >= 1.3:
-            score -= 4.0
-            reasons.append("좁은 도로에서 운송 부담")
-        if staging_area_m2 < 150 and module.install_difficulty_coeff >= 1.4:
-            score -= 3.0
-            reasons.append("적치공간 부족 시 설치 부담")
-
-        rows.append({"module": module, "score": round(score, 2), "reasons": reasons})
-
-    rows.sort(key=lambda x: x["score"], reverse=True)
-    return rows[0]["module"], rows
-
-
 def select_vehicle_specs(module_length_m: float, module_width_m: float, module_height_m: float, module_weight_t: float, road_width_m: float) -> List[Dict[str, object]]:
     rows = []
     for trailer in TRAILER_DB:
@@ -601,12 +380,14 @@ def select_vehicle_specs(module_length_m: float, module_width_m: float, module_h
         width_ok = module_width_m <= trailer.deck_width_m or module_width_m <= 3.5
         payload_ok = module_weight_t <= trailer.payload_t
         turn_ok = road_width_m >= trailer.min_turn_width_m
+
         if length_ok and width_ok and payload_ok and turn_ok:
             status = "가능"
         elif payload_ok and width_ok:
             status = "조건부 가능"
         else:
             status = "불가"
+
         rows.append(
             {
                 "운송 차량": trailer.name,
@@ -665,6 +446,7 @@ def evaluate_route_permit(
         "코너 2개 이상": 2,
         "협소 코너 다수/U턴 필요": 3,
     }
+
     if turn_map[turn_condition] >= 3:
         route_ok = False
         reasons.append("협소 코너/U턴 필요")
@@ -850,16 +632,16 @@ def evaluate_cranes(
 
 def compute_max_feasible_floors(
     crane_rows: List[Dict[str, object]],
-    selected_module: ModuleType,
     floor_to_floor_m: float,
     crane_extra_clearance_m: float,
+    module_floor_max: int,
 ) -> int:
     feasible_cranes = [r for r in crane_rows if r["판정"] in ["가능", "조건부 가능"]]
     if not feasible_cranes:
         return 0
     max_hook_height = max(r["최대Hook높이(m)"] for r in feasible_cranes)
     hook_based = max(0, int((max_hook_height - crane_extra_clearance_m) // floor_to_floor_m))
-    return max(0, min(selected_module.floor_max, hook_based))
+    return max(0, min(module_floor_max, hook_based))
 
 
 def final_decision(route_status: str, best_crane_status: str, max_feasible_floors: int, target_floors: int) -> Tuple[str, List[str]]:
@@ -890,72 +672,19 @@ def generate_improvement_actions(result_status: str, route_status: str, crane_ro
         actions.append("크레인 설치 위치 변경 또는 상위 장비군 검토")
         actions.append("적치장 확보 및 전면부 설치 폭 확보 필요")
     if max_feasible_floors < target_floors:
-        actions.append(f"목표 층수 {target_floors}층을 {max_feasible_floors}층 이하로 조정하거나 하이브리드 구조 검토")
+        actions.append(f"목표 층수 {target_floors}층을 {max_feasible_floors}층 이하로 조정하거나 하부 RC + 상부 모듈러 검토")
     if result_status == "가능":
-        actions.append("현재 조건 기준으로 실제 사례 부지 데이터 입력 후 비교 분석 확장 가능")
+        actions.append("현재 조건 기준으로 실제 사례 부지 데이터를 넣어 시나리오 비교 분석 가능")
     return actions
 
 
-def create_site_plan_figure(
-    site_width_m: float,
-    site_depth_m: float,
-    road_width_m: float,
-    building_length_m: float,
-    building_width_m: float,
-    front_setback_m: float,
-    side_clearance_m: float,
-    crane_offset_m: float,
-    crane_radius_m: float,
-    trailer_length_m: float,
-    trailer_width_m: float,
-    road_occupation_possible: bool,
-) -> go.Figure:
-    fig = go.Figure()
-
-    road_x0 = -road_width_m
-    road_x1 = 0
-    site_x0 = 0
-    site_x1 = site_depth_m
-    site_y0 = 0
-    site_y1 = site_width_m
-
-    fig.add_shape(type="rect", x0=road_x0, x1=road_x1, y0=site_y0, y1=site_y1, fillcolor="#dbeafe", line=dict(color="#93c5fd"))
-    fig.add_shape(type="rect", x0=site_x0, x1=site_x1, y0=site_y0, y1=site_y1, fillcolor="#ecfccb", line=dict(color="#84cc16", width=2))
-
-    building_x0 = front_setback_m
-    building_x1 = min(site_depth_m - front_setback_m, front_setback_m + building_width_m)
-    building_y0 = side_clearance_m
-    building_y1 = min(site_width_m - side_clearance_m, side_clearance_m + building_length_m)
-    fig.add_shape(type="rect", x0=building_x0, x1=building_x1, y0=building_y0, y1=building_y1, fillcolor="#fde68a", line=dict(color="#f59e0b", width=2))
-
-    crane_x = max(1.5, crane_offset_m)
-    crane_y = site_width_m / 2
-    fig.add_trace(go.Scatter(x=[crane_x], y=[crane_y], mode="markers+text", text=["Crane"], textposition="top center", marker=dict(size=12, color="#dc2626"), name="크레인"))
-
-    theta = [i for i in range(361)]
-    circle_x = [crane_x + crane_radius_m * math.cos(math.radians(t)) for t in theta]
-    circle_y = [crane_y + crane_radius_m * math.sin(math.radians(t)) for t in theta]
-    fig.add_trace(go.Scatter(x=circle_x, y=circle_y, mode="lines", line=dict(color="#dc2626", dash="dash"), name="작업 반경"))
-
-    trailer_x0 = -road_width_m + 0.4
-    trailer_x1 = trailer_x0 + max(2.0, min(trailer_length_m, road_width_m + 4.0))
-    trailer_y0 = max(0.5, site_width_m / 2 - trailer_width_m / 2)
-    trailer_y1 = min(site_width_m - 0.5, trailer_y0 + trailer_width_m)
-    fig.add_shape(type="rect", x0=trailer_x0, x1=trailer_x1, y0=trailer_y0, y1=trailer_y1, fillcolor="#c7d2fe", line=dict(color="#4f46e5"))
-
-    if road_occupation_possible:
-        fig.add_shape(type="rect", x0=road_x0 - 2.5, x1=road_x0, y0=0, y1=site_width_m, fillcolor="#fee2e2", line=dict(color="#ef4444", dash="dot"))
-
-    fig.add_annotation(x=(road_x0 + road_x1) / 2, y=site_width_m - 2, text="전면도로", showarrow=False)
-    fig.add_annotation(x=(site_x0 + site_x1) / 2, y=site_width_m - 2, text="대지", showarrow=False)
-    fig.add_annotation(x=(building_x0 + building_x1) / 2, y=(building_y0 + building_y1) / 2, text="계획 건물", showarrow=False)
-
-    fig.update_xaxes(title="깊이 방향 (m)", scaleanchor="y", scaleratio=1)
-    fig.update_yaxes(title="폭 방향 (m)")
-    fig.update_layout(height=650, margin=dict(l=20, r=20, t=30, b=20), legend=dict(orientation="h"))
-    return fig
+def make_reason_df(items: List[str], col_name: str) -> pd.DataFrame:
+    return pd.DataFrame({col_name: items})
 
 
+# ============================================================
+# 3D HELPERS
+# ============================================================
 def cuboid_edges(x0: float, x1: float, y0: float, y1: float, z0: float, z1: float):
     pts = [
         (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z0),
@@ -965,56 +694,269 @@ def cuboid_edges(x0: float, x1: float, y0: float, y1: float, z0: float, z1: floa
     return [p[0] for p in pts], [p[1] for p in pts], [p[2] for p in pts]
 
 
-def create_stack_3d_figure(
+def add_box_wireframe(fig: go.Figure, x0: float, x1: float, y0: float, y1: float, z0: float, z1: float, name: str, color: str = None, width: int = 4, showlegend: bool = False):
+    xs, ys, zs = cuboid_edges(x0, x1, y0, y1, z0, z1)
+    line_kwargs = {"width": width}
+    if color is not None:
+        line_kwargs["color"] = color
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=xs,
+            y=ys,
+            z=zs,
+            mode="lines",
+            line=line_kwargs,
+            name=name,
+            showlegend=showlegend,
+            hoverinfo="name",
+        )
+    )
+
+
+def add_ground_mesh(fig: go.Figure, x0: float, x1: float, y0: float, y1: float, z: float, color: str, name: str, opacity: float):
+    fig.add_trace(
+        go.Mesh3d(
+            x=[x0, x1, x1, x0],
+            y=[y0, y0, y1, y1],
+            z=[z, z, z, z],
+            i=[0, 0],
+            j=[1, 2],
+            k=[2, 3],
+            color=color,
+            opacity=opacity,
+            name=name,
+            hoverinfo="name",
+            showlegend=True,
+        )
+    )
+
+
+def create_full_site_3d_figure(
+    site_width_m: float,
+    site_depth_m: float,
+    road_width_m: float,
     building_length_m: float,
     building_width_m: float,
     floor_to_floor_m: float,
     floors_to_show: int,
     module_length_m: float,
     module_width_m: float,
+    front_setback_m: float,
+    side_clearance_m: float,
+    crane_offset_m: float,
+    trailer_length_m: float,
+    trailer_width_m: float,
+    display_modules_count: int,
 ) -> go.Figure:
     fig = go.Figure()
 
+    # 좌표계
+    # x = 대지 깊이 방향
+    # y = 대지 폭 방향
+    # z = 높이
+
+    # 1) 도로
+    add_ground_mesh(
+        fig,
+        x0=-road_width_m,
+        x1=0,
+        y0=0,
+        y1=site_width_m,
+        z=0,
+        color="lightblue",
+        name="전면도로",
+        opacity=0.55,
+    )
+
+    # 2) 대지
+    add_ground_mesh(
+        fig,
+        x0=0,
+        x1=site_depth_m,
+        y0=0,
+        y1=site_width_m,
+        z=0,
+        color="lightgreen",
+        name="대지",
+        opacity=0.35,
+    )
+
+    # 3) 건물 경계
+    building_x0 = front_setback_m
+    building_x1 = min(site_depth_m - front_setback_m, front_setback_m + building_width_m)
+    building_y0 = side_clearance_m
+    building_y1 = min(site_width_m - side_clearance_m, side_clearance_m + building_length_m)
+
+    add_box_wireframe(
+        fig,
+        building_x0,
+        building_x1,
+        building_y0,
+        building_y1,
+        0,
+        max(0.1, floors_to_show * floor_to_floor_m),
+        "건물 외곽",
+        color="#f59e0b",
+        width=5,
+        showlegend=True,
+    )
+
+    # 4) 트레일러
+    trailer_x0 = -road_width_m + 0.6
+    trailer_x1 = min(-0.2, trailer_x0 + min(trailer_length_m, road_width_m + 3.0))
+    trailer_y0 = max(0.8, site_width_m / 2 - trailer_width_m / 2)
+    trailer_y1 = min(site_width_m - 0.8, trailer_y0 + trailer_width_m)
+
+    add_box_wireframe(
+        fig,
+        trailer_x0,
+        trailer_x1,
+        trailer_y0,
+        trailer_y1,
+        0,
+        1.2,
+        "트레일러",
+        color="#4f46e5",
+        width=6,
+        showlegend=True,
+    )
+
+    # 트레일러 적재 모듈 1개
+    module_on_trailer_length = min(module_length_m * 0.85, max(1.0, trailer_x1 - trailer_x0 - 0.3))
+    module_on_trailer_width = min(module_width_m * 0.90, max(0.8, trailer_y1 - trailer_y0 - 0.2))
+    mtx0 = trailer_x0 + 0.15
+    mtx1 = mtx0 + module_on_trailer_length
+    mty0 = trailer_y0 + 0.10
+    mty1 = mty0 + module_on_trailer_width
+
+    add_box_wireframe(
+        fig,
+        mtx0,
+        mtx1,
+        mty0,
+        mty1,
+        1.2,
+        1.2 + 2.3,
+        "운송 중 모듈",
+        color="#2563eb",
+        width=4,
+        showlegend=True,
+    )
+
+    # 5) 크레인 mast
+    crane_x = max(1.5, crane_offset_m)
+    crane_y = site_width_m / 2
+    mast_half = 0.35
+    mast_height = floors_to_show * floor_to_floor_m + 8.0
+
+    add_box_wireframe(
+        fig,
+        crane_x - mast_half,
+        crane_x + mast_half,
+        crane_y - mast_half,
+        crane_y + mast_half,
+        0,
+        mast_height,
+        "크레인 마스트",
+        color="#dc2626",
+        width=7,
+        showlegend=True,
+    )
+
+    # 6) 크레인 boom
+    hook_target_x = building_x0 + (building_x1 - building_x0) / 2
+    hook_target_y = building_y0 + (building_y1 - building_y0) / 2
+    boom_z0 = mast_height
+    boom_z1 = floors_to_show * floor_to_floor_m + 2.0
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[crane_x, hook_target_x],
+            y=[crane_y, hook_target_y],
+            z=[boom_z0, boom_z1],
+            mode="lines",
+            line=dict(color="#dc2626", width=8),
+            name="크레인 붐",
+            showlegend=True,
+            hoverinfo="name",
+        )
+    )
+
+    # 7) 모듈 적층
     count_x = max(1, int(building_width_m // module_width_m))
     count_y = max(1, int(building_length_m // module_length_m))
+    total_slots = count_x * count_y * max(1, floors_to_show)
+    modules_to_draw = min(display_modules_count, total_slots)
 
+    drawn = 0
     for floor in range(floors_to_show):
         z0 = floor * floor_to_floor_m
         z1 = z0 + floor_to_floor_m * 0.9
-        for ix in range(count_x):
-            for iy in range(count_y):
-                x0 = ix * module_width_m
-                x1 = x0 + module_width_m * 0.95
-                y0 = iy * module_length_m
-                y1 = y0 + module_length_m * 0.95
-                xs, ys, zs = cuboid_edges(x0, x1, y0, y1, z0, z1)
-                fig.add_trace(go.Scatter3d(x=xs, y=ys, z=zs, mode="lines", showlegend=False))
 
+        for iy in range(count_y):
+            for ix in range(count_x):
+                if drawn >= modules_to_draw:
+                    break
+
+                x0 = building_x0 + ix * module_width_m
+                x1 = x0 + module_width_m * 0.95
+                y0 = building_y0 + iy * module_length_m
+                y1 = y0 + module_length_m * 0.95
+
+                if x1 <= building_x1 and y1 <= building_y1:
+                    add_box_wireframe(
+                        fig,
+                        x0,
+                        x1,
+                        y0,
+                        y1,
+                        z0,
+                        z1,
+                        f"Module {drawn+1}",
+                        color="#111827",
+                        width=3,
+                        showlegend=False,
+                    )
+                    drawn += 1
+            if drawn >= modules_to_draw:
+                break
+        if drawn >= modules_to_draw:
+            break
+
+    # 8) 카메라 및 축
+    max_z = max(mast_height, floors_to_show * floor_to_floor_m + 5)
     fig.update_layout(
-        height=650,
-        margin=dict(l=10, r=10, t=20, b=10),
+        height=820,
+        margin=dict(l=0, r=0, t=20, b=0),
+        legend=dict(orientation="h"),
         scene=dict(
-            xaxis_title="건물 폭 방향 (m)",
-            yaxis_title="건물 길이 방향 (m)",
+            xaxis_title="깊이 방향 (m)",
+            yaxis_title="폭 방향 (m)",
             zaxis_title="높이 (m)",
-            aspectmode="data",
+            aspectmode="manual",
+            aspectratio=dict(
+                x=max(site_depth_m + road_width_m, 10) / 20,
+                y=max(site_width_m, 10) / 20,
+                z=max(max_z, 10) / 20,
+            ),
+            camera=dict(
+                eye=dict(x=1.8, y=1.7, z=1.1)
+            ),
         ),
     )
+
     return fig
-
-
-def make_reason_df(items: List[str], col_name: str) -> pd.DataFrame:
-    return pd.DataFrame({col_name: items})
 
 
 # ============================================================
 # SIDEBAR INPUT
 # ============================================================
 st.sidebar.markdown("## 입력 패널")
-st.sidebar.caption("도심 노후 부지에서 모듈러 운송·양중·적층이 가능한지 시각적으로 검토하는 Step1 분석 도구입니다.")
+st.sidebar.caption("입력값을 바탕으로 LH 표준 모듈을 자동 적층하고, 도로·트레일러·크레인·모듈러를 하나의 3D 장면으로 보여줍니다.")
 
 st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">기본 정보</div>', unsafe_allow_html=True)
-project_name = st.sidebar.text_input("사업명", value="도심 노후 부지 모듈러 적용 검토")
+project_name = st.sidebar.text_input("사업명", value="도심 노후 부지 모듈러 3D 적용 검토")
 site_address = st.sidebar.text_input("부지 도로명주소", value="")
 building_use = st.sidebar.selectbox("건물 용도", ["공동주택", "기숙사", "학교", "병원", "업무시설", "복합용도"])
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
@@ -1036,67 +978,18 @@ st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
 st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">건물 계획 조건</div>', unsafe_allow_html=True)
 gross_area_m2 = st.sidebar.number_input("목표 연면적 (㎡)", min_value=50.0, value=900.0, step=10.0)
-floors = st.sidebar.number_input("목표 층수", min_value=1, max_value=30, value=5, step=1)
 building_length_m = st.sidebar.number_input("계획 건물 길이 (m)", min_value=6.0, value=24.0, step=1.0)
 building_width_m = st.sidebar.number_input("계획 건물 폭 (m)", min_value=4.0, value=12.0, step=1.0)
 front_setback_m = st.sidebar.number_input("전면 이격거리 (m)", min_value=0.0, value=3.0, step=0.5)
 side_clearance_m = st.sidebar.number_input("측면 이격거리 (m)", min_value=0.0, value=2.0, step=0.5)
 floor_to_floor_m = st.sidebar.number_input("층고/층간 높이 (m)", min_value=2.5, value=3.2, step=0.1)
 extra_clearance_m = st.sidebar.number_input("설치 여유 높이 (m)", min_value=0.0, value=3.0, step=0.5)
-repeatability_score = st.sidebar.slider("반복형 평면 정도", 1, 5, 4)
-public_space_ratio = st.sidebar.slider("공용공간 비중", 1, 5, 2)
-open_plan_need = st.sidebar.slider("개방형 평면 요구", 1, 5, 2)
-st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-st.sidebar.markdown('<div class="sidebar-group"><div class="sidebar-group-title">모듈 및 장비 조건</div>', unsafe_allow_html=True)
-module_mode = st.sidebar.radio("모듈 선정 방식", ["자동 추천", "DB 선택", "직접 입력"], horizontal=True)
-recommended_module = None
-module_ranking = []
-if module_mode == "자동 추천":
-    recommended_module, module_ranking = auto_select_module(
-        building_use=building_use,
-        floors=int(floors),
-        repeatability_score=repeatability_score,
-        public_space_ratio=public_space_ratio,
-        open_plan_need=open_plan_need,
-        road_width_m=road_width_m,
-        staging_area_m2=staging_area_m2,
-    )
-    selected_module = recommended_module
-elif module_mode == "DB 선택":
-    selected_module = MODULE_DB[st.sidebar.selectbox("모듈 타입", list(MODULE_DB.keys()))]
-else:
-    selected_module = None
-
-if selected_module:
-    module_name = selected_module.name
-    module_width_m = st.sidebar.number_input("모듈 폭 (m)", value=float(selected_module.width_m), step=0.1)
-    module_length_m = st.sidebar.number_input("모듈 길이 (m)", value=float(selected_module.length_m), step=0.1)
-    module_height_m = st.sidebar.number_input("모듈 높이 (m)", value=float(selected_module.height_m), step=0.1)
-    module_weight_t = st.sidebar.number_input("모듈 자중 (t)", value=float(selected_module.weight_t_default), step=0.1)
-    module_form = selected_module.openness
-    module_floor_min = selected_module.floor_min
-    module_floor_max = selected_module.floor_max
-    transport_coeff = selected_module.transport_difficulty_coeff
-    install_coeff = selected_module.install_difficulty_coeff
-    module_eff = selected_module.base_efficiency_ratio
-else:
-    module_name = "사용자 정의 모듈"
-    module_width_m = st.sidebar.number_input("모듈 폭 (m)", value=3.2, step=0.1)
-    module_length_m = st.sidebar.number_input("모듈 길이 (m)", value=10.0, step=0.1)
-    module_height_m = st.sidebar.number_input("모듈 높이 (m)", value=3.4, step=0.1)
-    module_weight_t = st.sidebar.number_input("모듈 자중 (t)", value=12.0, step=0.1)
-    module_form = st.sidebar.selectbox("모듈 형식", ["corner-supported", "open-ended", "open-sided", "hybrid", "대개구부/비정형"])
-    module_floor_min = 1
-    module_floor_max = 12
-    transport_coeff = 1.2
-    install_coeff = 1.2
-    module_eff = 0.80
-
+manual_target_floors = st.sidebar.number_input("비교용 목표 층수 (자동산정과 비교용)", min_value=1, max_value=30, value=5, step=1)
 crane_offset_m = st.sidebar.number_input("크레인 설치 후보점 이격거리 (m)", min_value=0.0, value=4.0, step=0.5)
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-run_analysis = st.sidebar.button("시공 가능성 분석 실행")
+run_analysis = st.sidebar.button("3D 시공 장면 생성 및 분석 실행")
 
 if run_analysis:
     st.session_state.analysis_ready = True
@@ -1108,12 +1001,12 @@ if run_analysis:
 st.markdown(
     f"""
     <div class="hero">
-        <div class="section-title">도심 노후 부지 모듈러 시공 가능성 시각화 분석</div>
+        <div class="section-title">LH 표준형 모듈 기반 도심 노후 부지 3D 시공 가능성 분석</div>
         <div class="section-desc">
-            부지 조건을 입력하면 도로·트레일러·크레인·모듈·적층 가능 층수를 함께 검토하여,
-            모듈러가 실제로 들어갈 수 있는지 여부를 <b>가능 / 조건부 가능 / 불가</b>로 판정합니다.
+            입력한 부지 및 건물 조건을 바탕으로 <b>필요 모듈 수</b>, <b>층당 배치 수</b>, <b>자동 필요 층수</b>를 계산하고,
+            전면도로·트레일러·크레인·모듈 적층 건물을 <b>하나의 3D 장면</b>으로 통합 시각화합니다.
         </div>
-        <div class="small-note">현재 버전은 Step1 전용입니다. 공사비 및 RC 비교는 제외했습니다.</div>
+        <div class="small-note">현재 버전은 LH 표준형 단일 모듈 가정이며, RC 공사비 비교는 제외하고 Step1 시공 가능성 중심으로 구성했습니다.</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1125,7 +1018,7 @@ if not st.session_state.analysis_ready:
         <div class="section-card">
             <div class="section-title">입력 후 분석 실행</div>
             <div class="section-desc">
-                왼쪽 입력 패널에서 부지·도로·건물·모듈 조건을 입력한 뒤 <b>시공 가능성 분석 실행</b> 버튼을 눌러주세요.
+                왼쪽 입력 패널에서 부지와 건물 조건을 입력한 뒤 <b>3D 시공 장면 생성 및 분석 실행</b> 버튼을 눌러주세요.
             </div>
         </div>
         """,
@@ -1135,16 +1028,53 @@ if not st.session_state.analysis_ready:
 
 
 # ============================================================
+# FIXED MODULE VALUES
+# ============================================================
+module_name = LH_STANDARD_MODULE["name"]
+module_width_m = LH_STANDARD_MODULE["width_m"]
+module_length_m = LH_STANDARD_MODULE["length_m"]
+module_height_m = LH_STANDARD_MODULE["height_m"]
+module_weight_t = LH_STANDARD_MODULE["weight_t"]
+module_eff = LH_STANDARD_MODULE["base_efficiency_ratio"]
+module_form = LH_STANDARD_MODULE["module_form"]
+transport_coeff = LH_STANDARD_MODULE["transport_difficulty_coeff"]
+install_coeff = LH_STANDARD_MODULE["install_difficulty_coeff"]
+module_floor_min = LH_STANDARD_MODULE["floor_min"]
+module_floor_max = LH_STANDARD_MODULE["floor_max"]
+
+
+# ============================================================
 # ANALYSIS
 # ============================================================
 lat, lon = geocode_address(site_address)
-required_radius_m = compute_required_radius(site_depth_m, front_setback_m, crane_offset_m, building_width_m)
-required_hook_height_m = compute_required_hook_height(floors * floor_to_floor_m, extra_clearance_m)
-needed_lifting_t = round(module_weight_t * 1.15, 2)
-modules_per_floor = estimate_modules_per_floor(building_length_m, building_width_m, module_length_m, module_width_m)
-estimated_module_count = estimate_module_count(gross_area_m2, module_length_m, module_width_m, module_eff)
 
-vehicle_rows = select_vehicle_specs(module_length_m, module_width_m, module_height_m, module_weight_t, road_width_m)
+required_radius_m = compute_required_radius(site_depth_m, front_setback_m, crane_offset_m, building_width_m)
+needed_lifting_t = round(module_weight_t * 1.15, 2)
+
+modules_per_floor = estimate_modules_per_floor(
+    building_length_m=building_length_m,
+    building_width_m=building_width_m,
+    module_length_m=module_length_m,
+    module_width_m=module_width_m,
+)
+
+estimated_module_count = estimate_module_count(
+    gross_area_m2=gross_area_m2,
+    module_length_m=module_length_m,
+    module_width_m=module_width_m,
+    efficiency_ratio=module_eff,
+)
+
+auto_required_floors = max(1, math.ceil(estimated_module_count / modules_per_floor))
+required_hook_height_m = compute_required_hook_height(auto_required_floors * floor_to_floor_m, extra_clearance_m)
+
+vehicle_rows = select_vehicle_specs(
+    module_length_m=module_length_m,
+    module_width_m=module_width_m,
+    module_height_m=module_height_m,
+    module_weight_t=module_weight_t,
+    road_width_m=road_width_m,
+)
 best_vehicle = vehicle_rows[0]
 transport_height_m = best_vehicle["운송 높이(m)"]
 total_weight_t = best_vehicle["총중량 추정(t)"]
@@ -1177,7 +1107,7 @@ transport_score, transport_reasons = transport_risk_score(
 install_score, install_reasons = installation_risk_score(
     module_length_m=module_length_m,
     module_weight_t=module_weight_t,
-    floors=int(floors),
+    floors=auto_required_floors,
     required_radius_m=required_radius_m,
     staging_area_m2=staging_area_m2,
     module_form=module_form,
@@ -1193,13 +1123,30 @@ crane_rows = evaluate_cranes(
 )
 
 best_crane = crane_rows[0]
-if selected_module is not None:
-    max_feasible_floors = compute_max_feasible_floors(crane_rows, selected_module, floor_to_floor_m, extra_clearance_m)
-else:
-    max_feasible_floors = max(0, int((max(r["최대Hook높이(m)"] for r in crane_rows if r["판정"] != "불가") - extra_clearance_m) // floor_to_floor_m)) if any(r["판정"] != "불가" for r in crane_rows) else 0
-max_feasible_floors = min(max_feasible_floors, module_floor_max)
-result_status, decision_reasons = final_decision(route_result["route_status"], best_crane["판정"], max_feasible_floors, int(floors))
-improvement_actions = generate_improvement_actions(result_status, route_result["route_status"], crane_rows, int(floors), max_feasible_floors)
+max_feasible_floors = compute_max_feasible_floors(
+    crane_rows=crane_rows,
+    floor_to_floor_m=floor_to_floor_m,
+    crane_extra_clearance_m=extra_clearance_m,
+    module_floor_max=module_floor_max,
+)
+
+display_floors = min(auto_required_floors, max_feasible_floors if max_feasible_floors > 0 else auto_required_floors)
+
+# 최종 판정은 자동 필요 층수를 기준으로 평가
+result_status, decision_reasons = final_decision(
+    route_status=route_result["route_status"],
+    best_crane_status=best_crane["판정"],
+    max_feasible_floors=max_feasible_floors,
+    target_floors=auto_required_floors,
+)
+
+improvement_actions = generate_improvement_actions(
+    result_status=result_status,
+    route_status=route_result["route_status"],
+    crane_rows=crane_rows,
+    target_floors=auto_required_floors,
+    max_feasible_floors=max_feasible_floors,
+)
 
 
 # ============================================================
@@ -1218,195 +1165,171 @@ st.markdown(
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    metric_box("운송 경로 판정", route_result["route_status"], f"유효 도로폭 {route_result['effective_road_width']}m")
+    metric_box("필요 총 모듈 수", f"{estimated_module_count}개", f"층당 배치 {modules_per_floor}개")
 with c2:
-    metric_box("추천 크레인", best_crane["장비"], f"판정 {best_crane['판정']} / 여유율 {best_crane['여유율']}")
+    metric_box("자동 필요 층수", f"{auto_required_floors}층", f"입력 연면적 기준")
 with c3:
-    metric_box("최대 가능 층수", f"{max_feasible_floors}층", f"목표 {int(floors)}층 대비")
+    metric_box("최대 가능 층수", f"{max_feasible_floors}층", f"크레인/높이 조건 기준")
 with c4:
-    metric_box("추천 모듈", module_name, f"{module_width_m}m × {module_length_m}m / {module_weight_t}t")
+    metric_box("고정 모듈", module_name, f"{module_width_m}m × {module_length_m}m × {module_height_m}m / {module_weight_t}t")
 
 
 # ============================================================
 # TABS
 # ============================================================
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["부지 시각화", "운송 검토", "양중 검토", "모듈/적층 검토", "종합 결론"])
+tab1, tab2, tab3, tab4 = st.tabs(["통합 3D 시각화", "운송 검토", "양중 검토", "종합 결론"])
 
 with tab1:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">부지 · 도로 · 장비 배치 평면</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">전면도로, 대지, 계획 건물, 크레인 위치, 작업 반경, 트레일러 정차 위치를 단순화하여 시각적으로 표시합니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">도로 · 트레일러 · 크레인 · 모듈러 적층 통합 3D 장면</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="section-desc">현재 입력 조건 기준으로 LH 표준형 모듈 {estimated_module_count}개가 필요하다고 보고, 실제 표현은 최대 가능 층수와 자동 필요 층수를 반영하여 {display_floors}개 층까지 적층 장면을 표시합니다.</div>',
+        unsafe_allow_html=True,
+    )
 
-    fig_plan = create_site_plan_figure(
+    fig_full_3d = create_full_site_3d_figure(
         site_width_m=site_width_m,
         site_depth_m=site_depth_m,
         road_width_m=road_width_m,
         building_length_m=building_length_m,
         building_width_m=building_width_m,
+        floor_to_floor_m=floor_to_floor_m,
+        floors_to_show=max(1, display_floors),
+        module_length_m=module_length_m,
+        module_width_m=module_width_m,
         front_setback_m=front_setback_m,
         side_clearance_m=side_clearance_m,
         crane_offset_m=crane_offset_m,
-        crane_radius_m=required_radius_m,
-        trailer_length_m=best_vehicle["적재면 길이(m)"],
-        trailer_width_m=best_vehicle["적재면 폭(m)"],
-        road_occupation_possible=(road_occupation_possible == "가능"),
+        trailer_length_m=float(best_vehicle["적재면 길이(m)"]),
+        trailer_width_m=float(best_vehicle["적재면 폭(m)"]),
+        display_modules_count=estimated_module_count,
     )
-    st.plotly_chart(fig_plan, use_container_width=True)
+    st.plotly_chart(fig_full_3d, use_container_width=True)
 
-    col_a, col_b = st.columns([1, 1])
-    with col_a:
-        st.markdown("#### 기본 부지 정보")
-        st.dataframe(
-            pd.DataFrame(
-                {
-                    "항목": ["대지 폭", "대지 깊이", "전면 도로폭", "접도 길이", "적치장 면적", "회전 조건"],
-                    "값": [
-                        f"{site_width_m} m",
-                        f"{site_depth_m} m",
-                        f"{road_width_m} m",
-                        f"{site_frontage_m} m",
-                        f"{staging_area_m2} ㎡",
-                        turn_condition,
-                    ],
-                }
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
-    with col_b:
-        st.markdown("#### 주소 및 좌표")
-        if lat is not None and lon is not None:
-            st.success(f"지오코딩 성공: 위도 {lat:.6f}, 경도 {lon:.6f}")
-            st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}), zoom=15)
-        else:
-            st.info("주소를 입력하지 않았거나 좌표 변환에 실패했습니다. 시각화는 입력 수치 기준으로 계속 진행됩니다.")
-
+    info_df = pd.DataFrame(
+        {
+            "항목": [
+                "고정 모듈명",
+                "모듈 크기",
+                "모듈 중량",
+                "층당 배치 수",
+                "총 필요 모듈 수",
+                "자동 필요 층수",
+                "3D 표시 층수",
+            ],
+            "값": [
+                module_name,
+                f"{module_width_m}m × {module_length_m}m × {module_height_m}m",
+                f"{module_weight_t}t",
+                f"{modules_per_floor}개/층",
+                f"{estimated_module_count}개",
+                f"{auto_required_floors}층",
+                f"{display_floors}층",
+            ],
+        }
+    )
+    st.dataframe(info_df, use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with tab2:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">운송 가능성 검토</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">모듈 규격과 도로 조건을 기준으로 트레일러 후보와 경로 허가 필요 여부를 판단합니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">운송 검토</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-desc">트레일러 적재 가능성과 도로 진입 가능성을 함께 검토합니다.</div>', unsafe_allow_html=True)
 
-    a1, a2, a3 = st.columns(3)
-    with a1:
+    c21, c22 = st.columns(2)
+    with c21:
+        metric_box("운송 경로 판정", route_result["route_status"], f"유효 도로폭 {route_result['effective_road_width']}m")
+    with c22:
         metric_box("운송 리스크", transport_risk_bucket(transport_score), f"총점 {transport_score}점")
-    with a2:
-        metric_box("최적 트레일러", best_vehicle["운송 차량"], f"판정 {best_vehicle['판정']}")
-    with a3:
-        metric_box("운송 높이/총중량", f"{transport_height_m}m / {total_weight_t}t", "법적 허가 및 경로 제한 검토")
 
-    st.markdown("#### 트레일러 후보표")
+    st.markdown("#### 추천 트레일러")
     st.dataframe(pd.DataFrame(vehicle_rows), use_container_width=True, hide_index=True)
 
-    st.markdown("#### 경로 판정 사유")
-    st.dataframe(make_reason_df(route_result["reasons"], "경로 검토 내용"), use_container_width=True, hide_index=True)
+    st.markdown("#### 경로/허가 검토 근거")
+    st.dataframe(make_reason_df(route_result["reasons"], "검토 근거"), use_container_width=True, hide_index=True)
 
-    st.markdown("#### 운송 리스크 세부 항목")
-    st.dataframe(make_reason_df(transport_reasons, "운송 리스크 근거"), use_container_width=True, hide_index=True)
+    st.markdown("#### 운송 리스크 상세")
+    st.dataframe(make_reason_df(transport_reasons, "운송 리스크 상세"), use_container_width=True, hide_index=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 with tab3:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">양중 장비 검토</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">필요 양중 하중, 작업 반경, 설치 폭, 훅 높이를 기준으로 장비 후보를 판정합니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">양중 검토</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-desc">필요 양중하중, 작업반경, Hook 높이 기준으로 크레인을 판정합니다.</div>', unsafe_allow_html=True)
 
-    b1, b2, b3, b4 = st.columns(4)
-    with b1:
-        metric_box("필요 양중 하중", f"{needed_lifting_t} t", "모듈 자중의 1.15배 기준")
-    with b2:
-        metric_box("필요 작업 반경", f"{round(required_radius_m, 1)} m", "전면부 설치 기준 단순 계산")
-    with b3:
-        metric_box("필요 훅 높이", f"{round(required_hook_height_m, 1)} m", "최고 층 + 설치 여유")
-    with b4:
-        metric_box("설치 리스크", installation_risk_bucket(install_score), f"총점 {install_score}점")
+    c31, c32, c33 = st.columns(3)
+    with c31:
+        metric_box("필요 양중하중", f"{needed_lifting_t}t", "모듈 자중 × 1.15")
+    with c32:
+        metric_box("필요 작업반경", f"{required_radius_m:.1f}m", "전면 이격 + 크레인 오프셋 + 건물 절반폭")
+    with c33:
+        metric_box("필요 Hook 높이", f"{required_hook_height_m:.1f}m", "자동 필요 층수 기준")
 
-    st.markdown("#### 크레인 후보표")
+    st.markdown("#### 크레인 후보 판정")
     st.dataframe(pd.DataFrame(crane_rows), use_container_width=True, hide_index=True)
 
-    st.markdown("#### 설치 리스크 세부 항목")
-    st.dataframe(make_reason_df(install_reasons, "양중/설치 리스크 근거"), use_container_width=True, hide_index=True)
+    st.markdown("#### 설치 리스크 상세")
+    st.dataframe(make_reason_df(install_reasons, "설치 리스크 상세"), use_container_width=True, hide_index=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 with tab4:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">모듈 및 적층 검토</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">선정된 모듈의 규격과 적층 가능 범위를 기준으로 배치 밀도와 가능 층수를 검토합니다.</div>', unsafe_allow_html=True)
-
-    d1, d2, d3, d4 = st.columns(4)
-    with d1:
-        metric_box("모듈 규격", f"{module_width_m} × {module_length_m} m", f"높이 {module_height_m}m")
-    with d2:
-        metric_box("모듈 자중", f"{module_weight_t} t", f"형식 {module_form}")
-    with d3:
-        metric_box("층당 배치 가능 수", f"{modules_per_floor} 개", "단순 격자 배치 기준")
-    with d4:
-        metric_box("예상 총 모듈 수", f"{estimated_module_count} 개", "연면적 기준 추정")
-
-    if module_mode == "자동 추천" and module_ranking:
-        st.markdown("#### 자동 추천 모듈 순위")
-        ranking_df = pd.DataFrame(
-            {
-                "모듈": [r["module"].name for r in module_ranking[:5]],
-                "점수": [r["score"] for r in module_ranking[:5]],
-                "주요 사유": ["; ".join(r["reasons"]) if r["reasons"] else "-" for r in module_ranking[:5]],
-            }
-        )
-        st.dataframe(ranking_df, use_container_width=True, hide_index=True)
-
-    floors_to_show = max(1, min(max_feasible_floors if max_feasible_floors > 0 else int(floors), 8))
-    st.markdown("#### 모듈 적층 3D 표현")
-    fig_3d = create_stack_3d_figure(
-        building_length_m=building_length_m,
-        building_width_m=building_width_m,
-        floor_to_floor_m=floor_to_floor_m,
-        floors_to_show=floors_to_show,
-        module_length_m=module_length_m,
-        module_width_m=module_width_m,
-    )
-    st.plotly_chart(fig_3d, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with tab5:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">종합 결론</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">현재 조건에서 모듈러의 실제 적용 가능 여부와, 불가 또는 조건부 가능 시 보완 방향을 제시합니다.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-desc">현재 입력 조건에서 LH 표준형 모듈을 기준으로 실제 적용 가능 여부와 보완 방향을 제시합니다.</div>', unsafe_allow_html=True)
 
     st.markdown(f"### 최종 판정: {grade_badge(result_status)}", unsafe_allow_html=True)
 
-    st.markdown("#### 최종 판단 근거")
-    all_reasons = decision_reasons + route_result["reasons"][:3]
-    if best_crane["판정"] != "가능":
-        all_reasons.append(f"추천 크레인 {best_crane['장비']} 판정: {best_crane['판정']}")
-    all_reasons.append(f"최대 가능 층수 추정: {max_feasible_floors}층")
-    st.dataframe(make_reason_df(all_reasons, "최종 판단 근거"), use_container_width=True, hide_index=True)
-
-    st.markdown("#### 추천 조합")
-    summary_df = pd.DataFrame(
+    st.markdown("#### 자동 산정 결과 요약")
+    auto_df = pd.DataFrame(
         {
-            "항목": ["추천 모듈", "추천 트레일러", "추천 크레인", "목표 층수", "최대 가능 층수", "운송 경로 판정"],
+            "항목": [
+                "고정 모듈",
+                "총 필요 모듈 수",
+                "층당 배치 수",
+                "자동 필요 층수",
+                "최대 가능 층수",
+                "비교용 수동 목표 층수",
+                "운송 경로 판정",
+                "추천 트레일러",
+                "추천 크레인",
+            ],
             "값": [
                 module_name,
+                f"{estimated_module_count}개",
+                f"{modules_per_floor}개/층",
+                f"{auto_required_floors}층",
+                f"{max_feasible_floors}층",
+                f"{manual_target_floors}층",
+                route_result["route_status"],
                 best_vehicle["운송 차량"],
                 best_crane["장비"],
-                f"{int(floors)}층",
-                f"{max_feasible_floors}층",
-                route_result["route_status"],
             ],
         }
     )
-    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+    st.dataframe(auto_df, use_container_width=True, hide_index=True)
+
+    st.markdown("#### 최종 판단 근거")
+    all_reasons = decision_reasons + route_result["reasons"][:3]
+    all_reasons.append(f"추천 크레인 판정: {best_crane['장비']} / {best_crane['판정']}")
+    all_reasons.append(f"자동 필요 층수: {auto_required_floors}층")
+    all_reasons.append(f"최대 가능 층수: {max_feasible_floors}층")
+    st.dataframe(make_reason_df(all_reasons, "최종 판단 근거"), use_container_width=True, hide_index=True)
 
     st.markdown("#### 보완 또는 다음 스터디 항목")
     if not improvement_actions:
-        improvement_actions = ["현재 버전에서는 공사비를 제외하고 시공 가능성만 검토했습니다. 다음 단계에서 사업성 분석을 연결하면 됩니다."]
-    st.dataframe(make_reason_df(improvement_actions, "개선/확장 방향"), use_container_width=True, hide_index=True)
+        improvement_actions = ["현재 버전은 시공 가능성 중심입니다. 다음 단계에서 RC 대비 공사비, 공기, 사업성 분석을 연결하면 됩니다."]
+    st.dataframe(make_reason_df(improvement_actions, "보완 항목"), use_container_width=True, hide_index=True)
+
+    if lat is not None and lon is not None:
+        st.markdown("#### 지오코딩 결과")
+        geo_df = pd.DataFrame(
+            {
+                "항목": ["주소", "위도", "경도"],
+                "값": [site_address, round(lat, 6), round(lon, 6)],
+            }
+        )
+        st.dataframe(geo_df, use_container_width=True, hide_index=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ============================================================
-# FOOTNOTE
-# ============================================================
-st.caption(
-    "현재 버전은 교수님 피드백에 맞춰 Step1 중심으로 재구성했습니다. 즉, RC/모듈러 우세 비교가 아니라, 도심 노후 부지에서 모듈러의 운송·양중·적층 가능 여부를 시각적으로 검토하는 앱입니다."
-)
