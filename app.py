@@ -1,18 +1,10 @@
 import math
 from io import BytesIO
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-
-# ============================================================
-# 세종 6-3 UR1·2BL 모듈러 사례 분석 프로그램
-# - 실제 사례 전용
-# - 3D 중심
-# - 도로/주변건물/크롤러크레인/트레일러/인양 모듈 포함
-# - 준공내역서는 시트 선택형으로만 읽기
-# ============================================================
 
 st.set_page_config(
     page_title="세종 6-3 모듈러 분석 프로그램",
@@ -20,9 +12,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# ------------------------------------------------------------
-# 0. 기본 데이터
-# ------------------------------------------------------------
+# ============================================================
+# 기본 데이터
+# ============================================================
 PROJECT_INFO = {
     "project_name": "행복도시 6-3생활권 UR1·2BL 모듈러 공공주택건설사업",
     "site_area_m2": 4178.0,
@@ -123,13 +115,11 @@ SURROUNDING_BUILDINGS = [
     {"name": "주변건물 C", "x": 42.0, "y": 72.0, "z": 0.0, "dx": 18.0, "dy": 14.0, "dz": 12.0, "color": "#c9c9c9"},
 ]
 
-
 # ------------------------------------------------------------
-# 1. 공통 함수
+# 공통 함수
 # ------------------------------------------------------------
 def format_krw(v: float) -> str:
     return f"{v:,.0f} 원"
-
 
 def clean_value(v):
     if pd.isna(v):
@@ -144,7 +134,6 @@ def clean_value(v):
             return v
     return v
 
-
 def row_to_text(row: pd.Series) -> str:
     vals = []
     for v in row.tolist():
@@ -153,7 +142,6 @@ def row_to_text(row: pd.Series) -> str:
             if s:
                 vals.append(s)
     return " | ".join(vals)
-
 
 def add_box(fig, x, y, z, dx, dy, dz, color, name="", opacity=0.92, show_edges=False):
     xs = [x, x+dx, x+dx, x, x, x+dx, x+dx, x]
@@ -189,58 +177,34 @@ def add_box(fig, x, y, z, dx, dy, dz, color, name="", opacity=0.92, show_edges=F
             ))
     return fig
 
-
-def add_cylinder(fig, center_x, center_y, z0, height, radius, color, name="", steps=24, opacity=0.95):
-    xs, ys, zs = [], [], []
+def add_cylinder(fig, center_x, center_y, z0, height, radius, color, name="", steps=24):
     for i in range(steps):
-        ang = 2 * math.pi * i / steps
-        xs.extend([center_x + radius * math.cos(ang), center_x + radius * math.cos(ang)])
-        ys.extend([center_y + radius * math.sin(ang), center_y + radius * math.sin(ang)])
-        zs.extend([z0, z0 + height])
-
-    # side surface as line skeleton for performance
-    for i in range(0, len(xs), 2):
+        ang1 = 2 * math.pi * i / steps
+        ang2 = 2 * math.pi * (i + 1) / steps
+        x1, y1 = center_x + radius * math.cos(ang1), center_y + radius * math.sin(ang1)
+        x2, y2 = center_x + radius * math.cos(ang2), center_y + radius * math.sin(ang2)
         fig.add_trace(go.Scatter3d(
-            x=[xs[i], xs[i+1]],
-            y=[ys[i], ys[i+1]],
-            z=[zs[i], zs[i+1]],
-            mode="lines",
-            line=dict(color=color, width=6),
-            hoverinfo="skip",
-            showlegend=False
+            x=[x1, x2], y=[y1, y2], z=[z0, z0],
+            mode="lines", line=dict(color=color, width=5), hoverinfo="skip", showlegend=False
         ))
-
-    ring_x = [center_x + radius * math.cos(2 * math.pi * i / steps) for i in range(steps+1)]
-    ring_y = [center_y + radius * math.sin(2 * math.pi * i / steps) for i in range(steps+1)]
-    fig.add_trace(go.Scatter3d(
-        x=ring_x, y=ring_y, z=[z0]*len(ring_x),
-        mode="lines",
-        line=dict(color=color, width=5),
-        hoverinfo="text",
-        text=name,
-        showlegend=False
-    ))
-    fig.add_trace(go.Scatter3d(
-        x=ring_x, y=ring_y, z=[z0+height]*len(ring_x),
-        mode="lines",
-        line=dict(color=color, width=5),
-        hoverinfo="skip",
-        showlegend=False
-    ))
-
+        fig.add_trace(go.Scatter3d(
+            x=[x1, x2], y=[y1, y2], z=[z0+height, z0+height],
+            mode="lines", line=dict(color=color, width=5), hoverinfo="skip", showlegend=False
+        ))
+        fig.add_trace(go.Scatter3d(
+            x=[x1, x1], y=[y1, y1], z=[z0, z0+height],
+            mode="lines", line=dict(color=color, width=5), hoverinfo="text", text=name, showlegend=False
+        ))
 
 def add_boom(fig, x0, y0, z0, x1, y1, z1, color="#d6a300", width=10, name="붐"):
     fig.add_trace(go.Scatter3d(
-        x=[x0, x1],
-        y=[y0, y1],
-        z=[z0, z1],
+        x=[x0, x1], y=[y0, y1], z=[z0, z1],
         mode="lines",
         line=dict(color=color, width=width),
         hoverinfo="text",
         text=name,
         showlegend=False
     ))
-
 
 def add_hook_line(fig, x0, y0, z0, x1, y1, z1):
     fig.add_trace(go.Scatter3d(
@@ -250,7 +214,6 @@ def add_hook_line(fig, x0, y0, z0, x1, y1, z1):
         hoverinfo="skip",
         showlegend=False
     ))
-
 
 def add_circle_on_ground(fig, center_x, center_y, radius, color="#ff9800", z=0.02, name="작업반경"):
     pts = 80
@@ -265,7 +228,6 @@ def add_circle_on_ground(fig, center_x, center_y, radius, color="#ff9800", z=0.0
         text=name,
         showlegend=False
     ))
-
 
 def generate_modules(building_key: str, module_w: float, module_l: float, module_h: float) -> pd.DataFrame:
     spec = BUILDING_SPECS[building_key]
@@ -286,12 +248,16 @@ def generate_modules(building_key: str, module_w: float, module_l: float, module
                 rows.append({
                     "building": building_key,
                     "floor": floor,
+                    "row_idx": row_idx + 1,
+                    "module_idx": n + 1,
                     "x": x, "y": y, "z": z,
                     "dx": module_w, "dy": depth, "dz": module_h,
+                    "cx": x + module_w / 2,
+                    "cy": y + depth / 2,
+                    "cz": z + module_h / 2,
                     "name": f"{building_key}-{floor}F-{row_idx+1}-{n+1}"
                 })
     return pd.DataFrame(rows)
-
 
 @st.cache_data(show_spinner=False)
 def build_module_dataframe(module_h: float) -> pd.DataFrame:
@@ -305,53 +271,63 @@ def build_module_dataframe(module_h: float) -> pd.DataFrame:
         ))
     return pd.concat(parts, ignore_index=True)
 
+def get_target_module(module_df: pd.DataFrame, building: str, floor: int, target_row: int, target_module_idx: int) -> Optional[pd.Series]:
+    df = module_df[(module_df["building"] == building) &
+                   (module_df["floor"] == floor) &
+                   (module_df["row_idx"] == target_row) &
+                   (module_df["module_idx"] == target_module_idx)]
+    if df.empty:
+        return None
+    return df.iloc[0]
 
-def add_crane_and_lifting_scene(fig, module_h: float, target_building: str, target_floor: int):
-    # 450톤 크롤러 크레인 - 단순 매스/선 표현
-    if target_building == "201":
-        crane_x, crane_y = -7.0, 22.0
-        target_x, target_y = 12.0, 10.2
+def add_crane_and_lifting_scene(fig, target_module: pd.Series):
+    # 대상 모듈 실제 크기/위치 사용
+    tx, ty, tz = float(target_module["x"]), float(target_module["y"]), float(target_module["z"])
+    tdx, tdy, tdz = float(target_module["dx"]), float(target_module["dy"]), float(target_module["dz"])
+    tcx, tcy = float(target_module["cx"]), float(target_module["cy"])
+    building = str(target_module["building"])
+
+    # 크레인은 건물 외부 남측 대로 쪽에 배치
+    if building == "201":
+        crane_x, crane_y = -8.5, -28.0
+        trailer_x, trailer_y = 3.0, -38.0
+        radius = 42.0
     else:
-        crane_x, crane_y = 78.0, 22.0
-        target_x, target_y = 98.0, 10.2
+        crane_x, crane_y = 77.5, -28.0
+        trailer_x, trailer_y = 90.0, -38.0
+        radius = 42.0
 
-    # 크롤러 본체
-    add_box(fig, crane_x, crane_y, 0.0, 6.5, 2.8, 1.8, color="#f2c037", name="450t 크롤러 크레인 본체", opacity=0.98)
-    add_box(fig, crane_x-1.8, crane_y+0.4, 0.0, 1.8, 2.0, 1.2, color="#444444", name="크롤러 좌측")
-    add_box(fig, crane_x+6.5, crane_y+0.4, 0.0, 1.8, 2.0, 1.2, color="#444444", name="크롤러 우측")
-    add_cylinder(fig, crane_x+3.25, crane_y+1.4, 1.8, 3.0, 0.45, "#666666", name="턴테이블")
-    add_circle_on_ground(fig, crane_x+3.25, crane_y+1.4, 26.0, color="#f39c12", name="크레인 작업반경")
+    # 크레인 본체/크롤러: 건물과 완전히 분리
+    add_box(fig, crane_x, crane_y, 0.0, 7.0, 3.2, 2.0, color="#f2c037", name="450t 크롤러 크레인 본체", opacity=0.98)
+    add_box(fig, crane_x-2.2, crane_y+0.5, 0.0, 2.2, 2.2, 1.0, color="#3f3f3f", name="크롤러 좌측")
+    add_box(fig, crane_x+7.0, crane_y+0.5, 0.0, 2.2, 2.2, 1.0, color="#3f3f3f", name="크롤러 우측")
+    add_cylinder(fig, crane_x+3.5, crane_y+1.6, 2.0, 3.4, 0.48, "#6d6d6d", name="턴테이블")
+    add_circle_on_ground(fig, crane_x+3.5, crane_y+1.6, radius, color="#f39c12", name="크레인 작업반경")
 
     # 붐
-    boom_base_x = crane_x + 3.25
-    boom_base_y = crane_y + 1.4
-    boom_base_z = 4.8
-    boom_tip_x = target_x + 2.2
-    boom_tip_y = target_y + 2.5
-    boom_tip_z = (target_floor - 3) * (module_h + 0.15) + 17.0
+    boom_base_x, boom_base_y, boom_base_z = crane_x + 3.5, crane_y + 1.6, 5.2
+    boom_tip_x, boom_tip_y, boom_tip_z = tcx, tcy, tz + tdz + 7.0
     add_boom(fig, boom_base_x, boom_base_y, boom_base_z, boom_tip_x, boom_tip_y, boom_tip_z, name="크레인 붐")
 
-    # 트레일러
-    trailer_x, trailer_y = crane_x - 2.0, crane_y - 8.0
-    add_box(fig, trailer_x, trailer_y, 0.0, 13.0, 3.0, 1.0, color="#2f4f4f", name="트레일러", opacity=0.95)
-    add_box(fig, trailer_x-3.0, trailer_y+0.4, 0.0, 3.0, 2.2, 1.6, color="#607d8b", name="트랙터 헤드", opacity=0.95)
+    # 트레일러: 남측 도로 위
+    add_box(fig, trailer_x, trailer_y, 0.0, 14.0, 3.2, 1.0, color="#2f4f4f", name="트레일러", opacity=0.95)
+    add_box(fig, trailer_x-3.2, trailer_y+0.4, 0.0, 3.2, 2.4, 1.8, color="#607d8b", name="트랙터 헤드", opacity=0.95)
 
-    # 인양 중 모듈
-    lifted_x = target_x
-    lifted_y = target_y
-    lifted_z = (target_floor - 3) * (module_h + 0.15) + 8.5
-    add_hook_line(fig, boom_tip_x, boom_tip_y, boom_tip_z, lifted_x + 1.65, lifted_y + 2.0, lifted_z + module_h)
-    add_box(fig, lifted_x, lifted_y, lifted_z, 3.3, 4.2, module_h, color="#00acc1", name="인양 중 모듈", opacity=0.92, show_edges=True)
+    # 인양 중 모듈: 실제 대상 모듈과 같은 크기
+    lifted_x = tx
+    lifted_y = ty
+    lifted_z = tz + tdz + 1.2
+    add_hook_line(fig, boom_tip_x, boom_tip_y, boom_tip_z, lifted_x + tdx/2, lifted_y + tdy/2, lifted_z + tdz)
+    add_box(fig, lifted_x, lifted_y, lifted_z, tdx, tdy, tdz, color="#00acc1", name="인양 중 모듈", opacity=0.92, show_edges=True)
 
-    # 설치 target 위치 하이라이트
-    target_z = (target_floor - 3) * (module_h + 0.15)
-    add_box(fig, target_x, target_y, target_z, 3.3, 4.2, 0.2, color="#ff5252", name="설치 목표 위치", opacity=0.65)
+    # 설치 target 위치: 실제 대상 모듈 footprint와 일치
+    add_box(fig, tx, ty, tz, tdx, tdy, 0.12, color="#ff5252", name="설치 목표 위치", opacity=0.72)
 
-    # 운송 경로 느낌
+    # 운송/인양 동선
     fig.add_trace(go.Scatter3d(
-        x=[trailer_x-1.0, crane_x+1.0, lifted_x+1.65],
-        y=[trailer_y+1.5, crane_y+1.4, lifted_y+2.0],
-        z=[0.1, 0.1, lifted_z+module_h],
+        x=[trailer_x + 7.0, crane_x + 3.5, lifted_x + tdx/2],
+        y=[trailer_y + 1.6, crane_y + 1.6, lifted_y + tdy/2],
+        z=[0.1, 0.1, lifted_z + tdz],
         mode="lines",
         line=dict(color="#1565c0", width=4, dash="dash"),
         hoverinfo="text",
@@ -359,28 +335,23 @@ def add_crane_and_lifting_scene(fig, module_h: float, target_building: str, targ
         showlegend=False
     ))
 
-
 def make_3d_figure(module_df: pd.DataFrame, show_roads: bool, show_surroundings: bool, show_edges: bool,
-                   show_crane: bool, crane_building: str, crane_floor: int, module_h: float):
+                   target_module: Optional[pd.Series]):
     fig = go.Figure()
 
-    # 부지
     add_box(fig, SITE_BOX["x"], SITE_BOX["y"], SITE_BOX["z"], SITE_BOX["dx"], SITE_BOX["dy"], SITE_BOX["dz"],
             color="#d9e8d0", name="대지", opacity=0.55, show_edges=False)
 
-    # 도로
     if show_roads:
         for r in ROADS:
             add_box(fig, r["x"], r["y"], r["z"], r["dx"], r["dy"], r["dz"],
                     color=r["color"], name=r["name"], opacity=0.8, show_edges=False)
 
-    # 주변 건물
     if show_surroundings:
         for b in SURROUNDING_BUILDINGS:
             add_box(fig, b["x"], b["y"], b["z"], b["dx"], b["dy"], b["dz"],
                     color=b["color"], name=b["name"], opacity=0.55, show_edges=False)
 
-    # 포디움/저층부
     add_box(fig, -1.5, -1.5, -4.8, 35.5, 32.0, 4.4, color="#c8c8c8", name="201 저층부/지하", opacity=0.60)
     add_box(fig, 84.5, -1.5, -4.8, 35.5, 32.0, 4.4, color="#c8c8c8", name="202 저층부/지하", opacity=0.60)
 
@@ -402,8 +373,8 @@ def make_3d_figure(module_df: pd.DataFrame, show_roads: bool, show_surroundings:
                 color=color, name=row["name"], opacity=0.95, show_edges=show_edges
             )
 
-    if show_crane:
-        add_crane_and_lifting_scene(fig, module_h=module_h, target_building=crane_building, target_floor=crane_floor)
+    if target_module is not None:
+        add_crane_and_lifting_scene(fig, target_module)
 
     fig.update_layout(
         margin=dict(l=0, r=0, t=10, b=0),
@@ -414,11 +385,10 @@ def make_3d_figure(module_df: pd.DataFrame, show_roads: bool, show_surroundings:
             zaxis_title="Z (m)",
             aspectmode="data",
             bgcolor="white",
-            camera=dict(eye=dict(x=1.7, y=1.4, z=1.1))
+            camera=dict(eye=dict(x=1.65, y=1.35, z=1.05))
         )
     )
     return fig
-
 
 @st.cache_data(show_spinner=False)
 def get_excel_sheet_names(file_bytes: bytes) -> List[str]:
@@ -426,12 +396,10 @@ def get_excel_sheet_names(file_bytes: bytes) -> List[str]:
     xls = pd.ExcelFile(bio, engine="openpyxl")
     return xls.sheet_names
 
-
 @st.cache_data(show_spinner=False)
 def read_excel_sheet(file_bytes: bytes, sheet_name: str) -> pd.DataFrame:
     bio = BytesIO(file_bytes)
     return pd.read_excel(bio, sheet_name=sheet_name, header=None, engine="openpyxl")
-
 
 def summarize_selected_sheet(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
@@ -459,9 +427,8 @@ def summarize_selected_sheet(df: pd.DataFrame) -> pd.DataFrame:
         out = out.sort_values(["numeric_count", "numeric_sum"], ascending=[False, False])
     return out
 
-
 # ------------------------------------------------------------
-# 2. 사이드바
+# 사이드바
 # ------------------------------------------------------------
 st.sidebar.title("설정")
 
@@ -480,13 +447,15 @@ st.sidebar.markdown("---")
 show_crane = st.sidebar.checkbox("양중장비/인양 장면 표시", True)
 crane_building = st.sidebar.selectbox("설치 대상 동", ["201", "202"], index=0)
 crane_floor = st.sidebar.selectbox("설치 대상 층", [3, 4, 5, 6, 7], index=2)
+crane_row = st.sidebar.selectbox("설치 대상 열(row)", [1, 2, 3], index=1)
+crane_module_idx = st.sidebar.slider("설치 대상 모듈 번호", 1, 9, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("엑셀은 시트 선택 후에만 읽습니다.")
-st.sidebar.caption("3D는 분석용 매스 모델입니다.")
+st.sidebar.caption("크레인과 트레일러는 건물 외부 남측 대로 쪽에 배치됩니다.")
+st.sidebar.caption("인양 중 모듈은 선택한 목표 모듈과 동일한 크기를 사용합니다.")
 
 # ------------------------------------------------------------
-# 3. 상단 요약
+# 상단 요약
 # ------------------------------------------------------------
 st.title("세종 6-3 UR1·2BL 모듈러 사례 분석 프로그램")
 
@@ -502,7 +471,7 @@ st.markdown("---")
 tabs = st.tabs(["3D 분석", "프로젝트 정보", "세대/모듈 DB", "층별 분석", "양중장비 해석", "준공내역서 분석"])
 
 # ------------------------------------------------------------
-# 4. 3D 분석
+# 3D 분석
 # ------------------------------------------------------------
 with tabs[0]:
     st.subheader("3D 매스 모델")
@@ -519,15 +488,18 @@ with tabs[0]:
         (module_df["floor"] <= floor_max)
     ].copy()
 
+    target_module = None
+    if show_crane:
+        target_module = get_target_module(module_df, crane_building, crane_floor, crane_row, crane_module_idx)
+        if target_module is None:
+            st.warning("선택한 동/층/열/모듈 번호 조합이 현재 표시 범위에 없습니다. 다른 조합을 선택해 주세요.")
+
     fig = make_3d_figure(
         module_df,
         show_roads,
         show_surroundings,
         show_edges,
-        show_crane,
-        crane_building,
-        crane_floor,
-        module_h
+        target_module
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -537,6 +509,20 @@ with tabs[0]:
     col2.metric("예상 운송 횟수", f"{total_modules_view} 회")
     col3.metric("표시 모듈 총 추정중량", f'{total_modules_view * PROJECT_INFO["module_weight_est_t"]:,.0f} t')
     col4.metric("모듈 1개 대표 면적", f'{PROJECT_INFO["module_width_m"] * PROJECT_INFO["module_length_repr_m"]:.1f} ㎡')
+
+    if target_module is not None:
+        st.markdown("### 현재 인양 장면 목표 모듈")
+        st.dataframe(pd.DataFrame([{
+            "building": target_module["building"],
+            "floor": int(target_module["floor"]),
+            "row_idx": int(target_module["row_idx"]),
+            "module_idx": int(target_module["module_idx"]),
+            "x": round(float(target_module["x"]), 2),
+            "y": round(float(target_module["y"]), 2),
+            "dx": round(float(target_module["dx"]), 2),
+            "dy": round(float(target_module["dy"]), 2),
+            "dz": round(float(target_module["dz"]), 2),
+        }]), use_container_width=True, hide_index=True)
 
     if not module_df.empty:
         summary = (
@@ -548,12 +534,12 @@ with tabs[0]:
         st.dataframe(summary, use_container_width=True, hide_index=True)
 
     st.info(
-        "3D 장면에는 대지, 주변 도로, 주변 건물, 두 개 동, 저층부/지하, "
-        "그리고 내역서 기반으로 해석한 450톤 크롤러 크레인 + 트레일러 + 인양 중 모듈이 포함됩니다."
+        "수정 사항: 크레인과 트레일러를 건물 외부 남측 대로 쪽으로 이동했고, "
+        "인양 중 모듈은 선택한 목표 모듈과 동일한 실제 표시 크기(dx, dy, dz)를 사용하도록 바꿨습니다."
     )
 
 # ------------------------------------------------------------
-# 5. 프로젝트 정보
+# 프로젝트 정보
 # ------------------------------------------------------------
 with tabs[1]:
     st.subheader("프로젝트 개요")
@@ -582,44 +568,17 @@ with tabs[1]:
         ], columns=["방향", "폭"])
         st.dataframe(road_df, use_container_width=True, hide_index=True)
 
-    st.markdown(
-        """
-### 현재 사례 해석 기준
-- 기본 세대 폭은 **6.6m**
-- 기본 모듈 폭은 **3.3m**
-- 세대당 기본 모듈 수는 **2개**
-- 반복층은 **3층~7층**
-- 이 프로그램은 **실제 도면 + 실제 내역서 연결용 실증 분석 프로그램**
-        """
-    )
-
-# ------------------------------------------------------------
-# 6. 세대/모듈 DB
-# ------------------------------------------------------------
 with tabs[2]:
     st.subheader("세대 타입 및 모듈 DB")
-
     df = UNIT_TYPE_DB.copy()
     df["module_width_m"] = PROJECT_INFO["module_width_m"]
     df["module_length_repr_m"] = PROJECT_INFO["module_length_repr_m"]
     df["module_area_repr_m2"] = PROJECT_INFO["module_width_m"] * PROJECT_INFO["module_length_repr_m"]
     st.dataframe(df, use_container_width=True, hide_index=True)
-
-    st.markdown("### 세대수 집계")
     st.dataframe(UNIT_COUNTS, use_container_width=True, hide_index=True)
 
-    total_modules = PROJECT_INFO["num_units"] * 2
-    cc1, cc2, cc3 = st.columns(3)
-    cc1.metric("세대당 모듈 수", "2 개")
-    cc2.metric("총 추정 모듈 수", f"{total_modules} 개")
-    cc3.metric("모듈 대표 footprint", f'{PROJECT_INFO["module_width_m"] * PROJECT_INFO["module_length_repr_m"]:.1f} ㎡')
-
-# ------------------------------------------------------------
-# 7. 층별 분석
-# ------------------------------------------------------------
 with tabs[3]:
     st.subheader("층별 구성 분석")
-
     floor_rows = []
     for b_key, spec in BUILDING_SPECS.items():
         for floor, floor_info in spec["floors"].items():
@@ -632,28 +591,12 @@ with tabs[3]:
                 "unit_count_est": math.floor(module_count / 2),
                 "층 성격": "주거 반복층"
             })
-
     floor_df = pd.DataFrame(floor_rows).sort_values(["building", "floor"])
     st.dataframe(floor_df, use_container_width=True, hide_index=True)
+    st.bar_chart(floor_df.pivot(index="floor", columns="building", values="module_count_est"))
 
-    pivot = floor_df.pivot(index="floor", columns="building", values="module_count_est")
-    st.bar_chart(pivot)
-
-    st.markdown(
-        """
-- **1층**: 판매시설 / 공용부 / 부대복리시설 비중이 큼  
-- **2층**: 전이층 성격  
-- **3층~7층**: 모듈러 반복층  
-- 현재 3D는 **3층~7층의 모듈 스택 구조 분석**에 초점을 둠
-        """
-    )
-
-# ------------------------------------------------------------
-# 8. 양중장비 해석
-# ------------------------------------------------------------
 with tabs[4]:
     st.subheader("양중장비 및 시공 흐름 해석")
-
     c1, c2 = st.columns(2)
     with c1:
         st.metric("현장 주 양중장비", "450톤 크롤러 크레인")
@@ -662,53 +605,21 @@ with tabs[4]:
         st.metric("대표 모듈 중량(추정)", f'{PROJECT_INFO["module_weight_est_t"]:.0f} t')
         st.metric("대표 모듈 규격", f'{PROJECT_INFO["module_width_m"]:.1f} × {PROJECT_INFO["module_length_repr_m"]:.1f} m')
 
-    flow_df = pd.DataFrame([
-        ["1", "공장 제작", "철골 프레임, 내장, 창호, 일부 설비 선조립"],
-        ["2", "야드 상차", "O/H 크레인으로 모듈을 트레일러에 상차"],
-        ["3", "현장 반입", "특수 트레일러로 현장 진입"],
-        ["4", "주 양중", "450톤 크롤러 크레인으로 모듈 인양"],
-        ["5", "모듈 설치", "반복층에 순차 적층 설치"],
-        ["6", "접합부 공사", "볼트/용접/마감 및 설비 연결"],
-    ], columns=["단계", "작업", "설명"])
-    st.dataframe(flow_df, use_container_width=True, hide_index=True)
-
     st.markdown(
         """
-### 내역서 기반으로 해석되는 장비 관련 항목
-- 모듈러 상차비 **O/H 크레인**
-- 장비비(모듈러) **450 ton CRAWLER CRANE**
-- 현장 설치비(모듈러) 장비비 포함
-- 접합부공사 장비비
-- 자재양중비
-
-현재 앱의 3D 장면에는 이 해석을 반영해서
-- **크롤러 크레인 본체**
-- **붐**
-- **작업반경**
-- **트레일러**
-- **인양 중 모듈**
-- **설치 목표 위치**
-를 함께 표현했습니다.
+- 공장/야드에서 **O/H 크레인 상차**
+- 특수 트레일러 **현장 반입**
+- 현장에서는 **450톤 크롤러 크레인**이 남측 대로 측 작업공간에서 인양
+- 목표 층/열/모듈 위치에 순차 설치
+- 접합부 공사 및 마감 진행
         """
     )
 
-# ------------------------------------------------------------
-# 9. 준공내역서 분석
-# ------------------------------------------------------------
 with tabs[5]:
     st.subheader("준공내역서 분석")
-
     known = KNOWN_COSTS.copy()
     known["금액표시"] = known["금액_원"].apply(format_krw)
-    st.markdown("### 현재 확보된 핵심 공사비")
     st.dataframe(known[["항목", "금액표시"]], use_container_width=True, hide_index=True)
-
-    u1, u2, u3 = st.columns(3)
-    u1.metric("세대당 총 공사비", format_krw(PROJECT_INFO["total_project_cost_krw"] / PROJECT_INFO["num_units"]))
-    u2.metric("연면적 ㎡당 총 공사비", format_krw(PROJECT_INFO["total_project_cost_krw"] / PROJECT_INFO["gross_floor_area_m2"]))
-    u3.metric("모듈당 단순 환산 공사비", format_krw(PROJECT_INFO["total_project_cost_krw"] / (PROJECT_INFO["num_units"] * 2)))
-
-    st.markdown("### 업로드한 준공내역서 읽기")
 
     if uploaded_excel is None:
         st.info("좌측에서 준공내역서를 업로드하면 시트명을 불러옵니다.")
@@ -717,35 +628,16 @@ with tabs[5]:
             file_bytes = uploaded_excel.getvalue()
             sheet_names = get_excel_sheet_names(file_bytes)
             selected_sheet = st.selectbox("확인할 시트 선택", sheet_names)
-
             if selected_sheet:
                 df_sheet = read_excel_sheet(file_bytes, selected_sheet)
-
                 col_a, col_b = st.columns([1, 1])
                 with col_a:
-                    st.markdown("#### 선택 시트 원본 (상위 50행)")
                     st.dataframe(df_sheet.head(50), use_container_width=True)
-
                 with col_b:
-                    st.markdown("#### 선택 시트 요약")
-                    summary_df = summarize_selected_sheet(df_sheet).head(30)
-                    st.dataframe(summary_df, use_container_width=True, hide_index=True)
-
-                csv_bytes = df_sheet.to_csv(index=False).encode("utf-8-sig")
-                st.download_button(
-                    "선택 시트 CSV 다운로드",
-                    data=csv_bytes,
-                    file_name=f"{selected_sheet}.csv",
-                    mime="text/csv"
-                )
-
+                    st.dataframe(summarize_selected_sheet(df_sheet).head(30), use_container_width=True, hide_index=True)
         except Exception as e:
             st.error(f"엑셀 분석 중 오류가 발생했습니다: {e}")
             st.caption("배포 환경에는 requirements.txt에 openpyxl이 반드시 포함되어 있어야 합니다.")
 
-
 st.markdown("---")
-st.caption(
-    "이 앱은 세종 6-3 실제 사례의 도면·내역서 기반 분석용입니다. "
-    "3D는 주변 도로/대지/주변 건물/두 개 동/반복층 모듈과 450톤 크롤러 크레인 인양 장면을 코드로 구현한 분석용 매스 모델입니다."
-)
+st.caption("수정본: 크레인/트레일러 위치를 건물 외부로 이동했고, 인양 모듈은 목표 모듈과 같은 크기를 사용합니다.")
